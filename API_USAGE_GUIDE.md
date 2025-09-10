@@ -532,4 +532,4 @@ Para dúvidas ou problemas:
 ---
 
 **Versão da API**: 1.0.0  
-**Última atualização**: Dezembro 2024
+**Última atualização**: Setembro 2025
