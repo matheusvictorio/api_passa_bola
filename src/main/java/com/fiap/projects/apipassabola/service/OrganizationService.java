@@ -9,6 +9,7 @@ import com.fiap.projects.apipassabola.exception.ResourceNotFoundException;
 import com.fiap.projects.apipassabola.repository.GameRepository;
 import com.fiap.projects.apipassabola.repository.OrganizationRepository;
 import com.fiap.projects.apipassabola.repository.PlayerRepository;
+import com.fiap.projects.apipassabola.util.CnpjValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -66,7 +67,14 @@ public class OrganizationService {
         Organization organization = organizationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Organization", "id", id));
         
-        // Note: Name uniqueness validation can be added when findByName method is implemented in repository
+        // Validate CNPJ uniqueness if it's being changed
+        String normalizedCnpj = CnpjValidator.unformat(request.getCnpj());
+        if (!normalizedCnpj.equals(organization.getCnpj())) {
+            Optional<Organization> existingOrg = organizationRepository.findByCnpj(normalizedCnpj);
+            if (existingOrg.isPresent()) {
+                throw new BusinessException("CNPJ already exists for another organization");
+            }
+        }
         
         organization.setName(request.getName());
         organization.setDescription(request.getDescription());
@@ -78,6 +86,7 @@ public class OrganizationService {
         organization.setWebsiteUrl(request.getWebsiteUrl());
         organization.setContactEmail(request.getContactEmail());
         organization.setContactPhone(request.getContactPhone());
+        organization.setCnpj(normalizedCnpj);
         
         Organization savedOrganization = organizationRepository.save(organization);
         return convertToResponse(savedOrganization);
@@ -113,6 +122,7 @@ public class OrganizationService {
         response.setWebsiteUrl(organization.getWebsiteUrl());
         response.setContactEmail(organization.getContactEmail());
         response.setContactPhone(organization.getContactPhone());
+        response.setCnpj(CnpjValidator.format(organization.getCnpj()));
         response.setPlayersCount(playerRepository.countByOrganizationId(organization.getId()).intValue());
         response.setTotalGames(gameRepository.countByHomeTeamIdOrAwayTeamId(organization.getId(), organization.getId()).intValue());
         response.setCreatedAt(organization.getCreatedAt());

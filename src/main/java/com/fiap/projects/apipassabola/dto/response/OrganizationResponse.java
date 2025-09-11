@@ -25,6 +25,7 @@ public class OrganizationResponse {
     private String websiteUrl;
     private String contactEmail;
     private String contactPhone;
+    private String cnpj;
     private int playersCount;
     private int totalGames;
     private LocalDateTime createdAt;

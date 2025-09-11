@@ -1,5 +1,6 @@
 package com.fiap.projects.apipassabola.dto.request;
 
+import com.fiap.projects.apipassabola.validation.ValidCnpj;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -35,4 +36,8 @@ public class OrganizationRequest {
     private String contactEmail;
     
     private String contactPhone;
+    
+    @NotBlank(message = "CNPJ is required")
+    @ValidCnpj(message = "CNPJ format is invalid")
+    private String cnpj;
 }

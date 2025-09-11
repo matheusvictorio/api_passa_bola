@@ -6,6 +6,7 @@ import com.fiap.projects.apipassabola.exception.BusinessException;
 import com.fiap.projects.apipassabola.exception.ResourceNotFoundException;
 import com.fiap.projects.apipassabola.repository.*;
 import com.fiap.projects.apipassabola.security.JwtUtil;
+import com.fiap.projects.apipassabola.util.CnpjValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -90,6 +91,12 @@ public class AuthService {
     public AuthResponse registerOrganization(OrganizationRegistrationRequest request) {
         validateUniqueCredentials(request.getUsername(), request.getEmail());
         
+        // Validate CNPJ uniqueness
+        String normalizedCnpj = CnpjValidator.unformat(request.getCnpj());
+        if (organizationRepository.findByCnpj(normalizedCnpj).isPresent()) {
+            throw new BusinessException("CNPJ already exists for another organization");
+        }
+        
         // Create User
         User user = new User();
         user.setUsername(request.getUsername());
@@ -111,6 +118,7 @@ public class AuthService {
         organization.setWebsiteUrl(request.getWebsiteUrl());
         organization.setContactEmail(request.getContactEmail());
         organization.setContactPhone(request.getContactPhone());
+        organization.setCnpj(normalizedCnpj);
         
         organization = organizationRepository.save(organization);
         

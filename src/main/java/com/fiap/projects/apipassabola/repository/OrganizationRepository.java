@@ -17,6 +17,8 @@ public interface OrganizationRepository extends JpaRepository<Organization, Long
     
     Optional<Organization> findByUserUsername(String username);
     
+    Optional<Organization> findByCnpj(String cnpj);
+    
     @Query("SELECT o FROM Organization o WHERE LOWER(o.name) LIKE LOWER(CONCAT('%', :name, '%'))")
     Page<Organization> findByNameContainingIgnoreCase(@Param("name") String name, Pageable pageable);
     

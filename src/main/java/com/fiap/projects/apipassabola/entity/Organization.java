@@ -54,6 +54,9 @@ public class Organization {
     @Column(name = "contact_phone")
     private String contactPhone;
     
+    @Column(name = "cnpj", unique = true, nullable = false, length = 14)
+    private String cnpj;
+    
     @OneToMany(mappedBy = "organization", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Set<Player> players = new HashSet<>();
     
