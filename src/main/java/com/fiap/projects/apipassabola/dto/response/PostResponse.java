@@ -13,7 +13,9 @@ import java.time.LocalDateTime;
 public class PostResponse {
     
     private Long id;
-    private PlayerSummaryResponse player;
+    private Long authorId;
+    private String authorUsername;
+    private String authorRole;
     private String content;
     private String imageUrl;
     private Post.PostType type;

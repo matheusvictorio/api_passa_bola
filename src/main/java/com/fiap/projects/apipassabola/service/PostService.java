@@ -4,6 +4,7 @@ import com.fiap.projects.apipassabola.dto.request.PostRequest;
 import com.fiap.projects.apipassabola.dto.response.PostResponse;
 import com.fiap.projects.apipassabola.entity.Player;
 import com.fiap.projects.apipassabola.entity.Post;
+import com.fiap.projects.apipassabola.entity.User;
 import com.fiap.projects.apipassabola.exception.BusinessException;
 import com.fiap.projects.apipassabola.exception.ResourceNotFoundException;
 import com.fiap.projects.apipassabola.repository.PlayerRepository;
@@ -24,6 +25,7 @@ public class PostService {
     private final PostRepository postRepository;
     private final PlayerRepository playerRepository;
     private final PlayerService playerService;
+    private final UserContextService userContextService;
     
     public Page<PostResponse> findAll(Pageable pageable) {
         return postRepository.findAll(pageable).map(this::convertToResponse);
@@ -37,6 +39,22 @@ public class PostService {
     
     public Page<PostResponse> findByPlayer(Long playerId, Pageable pageable) {
         return postRepository.findByPlayerId(playerId, pageable)
+                .map(this::convertToResponse);
+    }
+    
+    public Page<PostResponse> findByAuthor(Long authorId, Pageable pageable) {
+        return postRepository.findByAuthorId(authorId, pageable)
+                .map(this::convertToResponse);
+    }
+    
+    public Page<PostResponse> findByCurrentUser(Pageable pageable) {
+        User currentUser = userContextService.getCurrentUser();
+        return postRepository.findByAuthorId(currentUser.getId(), pageable)
+                .map(this::convertToResponse);
+    }
+    
+    public Page<PostResponse> findByRole(String role, Pageable pageable) {
+        return postRepository.findByAuthorRole(role.toUpperCase(), pageable)
                 .map(this::convertToResponse);
     }
     
@@ -61,11 +79,17 @@ public class PostService {
     }
     
     public PostResponse create(PostRequest request) {
-        Player player = playerRepository.findById(request.getPlayerId())
-                .orElseThrow(() -> new ResourceNotFoundException("Player", "id", request.getPlayerId()));
+        User currentUser = userContextService.getCurrentUser();
+        
+        // Auto-detect player if the current user is a PLAYER and no specific playerId is provided
+        if (request.getPlayerId() != null) {
+            // Validate that the specified player exists (for backward compatibility)
+            playerRepository.findById(request.getPlayerId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Player", "id", request.getPlayerId()));
+        }
         
         Post post = new Post();
-        post.setPlayer(player);
+        post.setAuthor(currentUser);
         post.setContent(request.getContent());
         post.setImageUrl(request.getImageUrl());
         post.setType(request.getType());
@@ -81,6 +105,13 @@ public class PostService {
         Post post = postRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Post", "id", id));
         
+        User currentUser = userContextService.getCurrentUser();
+        
+        // Verify ownership - only the author can update their post
+        if (!post.isOwnedBy(currentUser)) {
+            throw new BusinessException("You can only update your own posts");
+        }
+        
         // Only allow updating content, imageUrl and type
         post.setContent(request.getContent());
         post.setImageUrl(request.getImageUrl());
@@ -91,9 +122,16 @@ public class PostService {
     }
     
     public void delete(Long id) {
-        if (!postRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Post", "id", id);
+        Post post = postRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Post", "id", id));
+        
+        User currentUser = userContextService.getCurrentUser();
+        
+        // Verify ownership - only the author can delete their post
+        if (!post.isOwnedBy(currentUser)) {
+            throw new BusinessException("You can only delete your own posts");
         }
+        
         postRepository.deleteById(id);
     }
     
@@ -140,7 +178,9 @@ public class PostService {
     private PostResponse convertToResponse(Post post) {
         PostResponse response = new PostResponse();
         response.setId(post.getId());
-        response.setPlayer(playerService.convertToSummaryResponse(post.getPlayer()));
+        response.setAuthorId(post.getAuthor().getId());
+        response.setAuthorUsername(post.getAuthor().getUsername());
+        response.setAuthorRole(post.getAuthor().getRole().name());
         response.setContent(post.getContent());
         response.setImageUrl(post.getImageUrl());
         response.setType(post.getType());

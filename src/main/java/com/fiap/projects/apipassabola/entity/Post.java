@@ -19,8 +19,8 @@ public class Post {
     private Long id;
     
     @ManyToOne
-    @JoinColumn(name = "player_id", nullable = false)
-    private Player player;
+    @JoinColumn(name = "author_id", nullable = false)
+    private User author;
     
     @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
@@ -48,7 +48,7 @@ public class Post {
     private LocalDateTime updatedAt;
     
     public enum PostType {
-        GENERAL, TRAINING, MATCH, ACHIEVEMENT, NEWS
+        GENERAL, TRAINING, MATCH, ACHIEVEMENT, NEWS, ORGANIZATION_UPDATE, SPECTATOR_OPINION
     }
     
     @PrePersist
@@ -63,7 +63,7 @@ public class Post {
     }
     
     // Helper methods
-    public void incrementLikes() {
+        public void incrementLikes() {
         this.likes++;
     }
     
@@ -85,5 +85,14 @@ public class Post {
         if (this.comments > 0) {
             this.comments--;
         }
+    }
+    
+    /**
+     * Checks if the post is owned by the given user
+     * @param user The user to check ownership against
+     * @return true if the user owns this post, false otherwise
+     */
+    public boolean isOwnedBy(User user) {
+        return this.author != null && user != null && this.author.getId().equals(user.getId());
     }
 }
