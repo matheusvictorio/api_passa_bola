@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +24,6 @@ import java.util.Map;
 @Transactional
 public class AuthService {
     
-    private final UserRepository userRepository;
     private final PlayerRepository playerRepository;
     private final OrganizationRepository organizationRepository;
     private final SpectatorRepository spectatorRepository;
@@ -33,43 +33,71 @@ public class AuthService {
     
     public AuthResponse login(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+            new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
         
-        User user = (User) authentication.getPrincipal();
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         
-        Map<String, Object> extraClaims = new HashMap<>();
-        extraClaims.put("role", user.getRole().name());
-        extraClaims.put("userId", user.getId());
+        // Find the actual entity based on email
+        String email = userDetails.getUsername(); // Spring Security uses getUsername() method, but we store email there
         
-        String token = jwtUtil.generateToken(user, extraClaims);
+        // Try to find in each repository
+        var playerOpt = playerRepository.findByEmail(email);
+        if (playerOpt.isPresent()) {
+            Player player = playerOpt.get();
+            Map<String, Object> extraClaims = new HashMap<>();
+            extraClaims.put("role", player.getUserType().name());
+            extraClaims.put("userId", player.getId());
+            
+            String token = jwtUtil.generateToken(player, extraClaims);
+            return new AuthResponse(token, player.getId(), player.getUsername(), player.getEmail(), 
+                    User.Role.valueOf(player.getUserType().name()), player.getId());
+        }
         
-        Long profileId = getProfileIdByUserAndRole(user);
+        var organizationOpt = organizationRepository.findByEmail(email);
+        if (organizationOpt.isPresent()) {
+            Organization organization = organizationOpt.get();
+            Map<String, Object> extraClaims = new HashMap<>();
+            extraClaims.put("role", organization.getUserType().name());
+            extraClaims.put("userId", organization.getId());
+            
+            String token = jwtUtil.generateToken(organization, extraClaims);
+            return new AuthResponse(token, organization.getId(), organization.getUsername(), organization.getEmail(), 
+                    User.Role.valueOf(organization.getUserType().name()), organization.getId());
+        }
         
-        return new AuthResponse(token, user.getId(), user.getUsername(), user.getEmail(), user.getRole(), profileId);
+        var spectatorOpt = spectatorRepository.findByEmail(email);
+        if (spectatorOpt.isPresent()) {
+            Spectator spectator = spectatorOpt.get();
+            Map<String, Object> extraClaims = new HashMap<>();
+            extraClaims.put("role", spectator.getUserType().name());
+            extraClaims.put("userId", spectator.getId());
+            
+            String token = jwtUtil.generateToken(spectator, extraClaims);
+            return new AuthResponse(token, spectator.getId(), spectator.getUsername(), spectator.getEmail(), 
+                    User.Role.valueOf(spectator.getUserType().name()), spectator.getId());
+        }
+        
+        throw new BusinessException("User not found");
     }
     
     public AuthResponse registerPlayer(PlayerRegistrationRequest request) {
         validateUniqueCredentials(request.getUsername(), request.getEmail());
         
-        // Create User
-        User user = new User();
-        user.setUsername(request.getUsername());
-        user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(User.Role.PLAYER);
-        user = userRepository.save(user);
-        
-        // Create Player
+        // Create Player with flattened structure
         Player player = new Player();
-        player.setUser(user);
-        player.setFirstName(request.getFirstName());
-        player.setLastName(request.getLastName());
+        player.setUserType(UserType.PLAYER);
+        player.setUsername(request.getUsername());
+        player.setName(request.getName());
+        player.setEmail(request.getEmail());
+        player.setPassword(passwordEncoder.encode(request.getPassword()));
         player.setBio(request.getBio());
         player.setBirthDate(request.getBirthDate());
-        player.setPosition(request.getPosition());
         player.setProfilePhotoUrl(request.getProfilePhotoUrl());
-        player.setJerseyNumber(request.getJerseyNumber());
+        player.setBannerUrl(request.getBannerUrl());
+        player.setPhone(request.getPhone());
+        player.setPastOrganization(request.getPastOrganization());
+        player.setGamesPlayed(request.getGamesPlayed() != null ? request.getGamesPlayed() : 0);
         
         if (request.getOrganizationId() != null) {
             organizationRepository.findById(request.getOrganizationId())
@@ -79,13 +107,14 @@ public class AuthService {
         player = playerRepository.save(player);
         
         Map<String, Object> extraClaims = new HashMap<>();
-        extraClaims.put("role", user.getRole().name());
-        extraClaims.put("userId", user.getId());
+        extraClaims.put("role", player.getUserType().name());
+        extraClaims.put("userId", player.getId());
         extraClaims.put("playerId", player.getId());
         
-        String token = jwtUtil.generateToken(user, extraClaims);
+        String token = jwtUtil.generateToken(player, extraClaims);
         
-        return new AuthResponse(token, user.getId(), user.getUsername(), user.getEmail(), user.getRole(), player.getId());
+        return new AuthResponse(token, player.getId(), player.getUsername(), player.getEmail(), 
+                User.Role.valueOf(player.getUserType().name()), player.getId());
     }
     
     public AuthResponse registerOrganization(OrganizationRegistrationRequest request) {
@@ -97,60 +126,44 @@ public class AuthService {
             throw new BusinessException("CNPJ already exists for another organization");
         }
         
-        // Create User
-        User user = new User();
-        user.setUsername(request.getUsername());
-        user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(User.Role.ORGANIZATION);
-        user = userRepository.save(user);
-        
-        // Create Organization
+        // Create Organization with flattened structure
         Organization organization = new Organization();
-        organization.setUser(user);
+        organization.setUserType(UserType.ORGANIZATION);
+        organization.setUsername(request.getUsername());
         organization.setName(request.getName());
-        organization.setDescription(request.getDescription());
-        organization.setCity(request.getCity());
-        organization.setState(request.getState());
-        organization.setLogoUrl(request.getLogoUrl());
-        organization.setPrimaryColors(request.getPrimaryColors());
-        organization.setFoundedYear(request.getFoundedYear());
-        organization.setWebsiteUrl(request.getWebsiteUrl());
-        organization.setContactEmail(request.getContactEmail());
-        organization.setContactPhone(request.getContactPhone());
+        organization.setEmail(request.getEmail());
+        organization.setPassword(passwordEncoder.encode(request.getPassword()));
         organization.setCnpj(normalizedCnpj);
+        // Set default values for fields not in registration request
+        organization.setGamesPlayed(0);
         
         organization = organizationRepository.save(organization);
         
         Map<String, Object> extraClaims = new HashMap<>();
-        extraClaims.put("role", user.getRole().name());
-        extraClaims.put("userId", user.getId());
+        extraClaims.put("role", organization.getUserType().name());
+        extraClaims.put("userId", organization.getId());
         extraClaims.put("organizationId", organization.getId());
         
-        String token = jwtUtil.generateToken(user, extraClaims);
+        String token = jwtUtil.generateToken(organization, extraClaims);
         
-        return new AuthResponse(token, user.getId(), user.getUsername(), user.getEmail(), user.getRole(), organization.getId());
+        return new AuthResponse(token, organization.getId(), organization.getUsername(), organization.getEmail(), 
+                User.Role.valueOf(organization.getUserType().name()), organization.getId());
     }
     
     public AuthResponse registerSpectator(SpectatorRegistrationRequest request) {
         validateUniqueCredentials(request.getUsername(), request.getEmail());
         
-        // Create User
-        User user = new User();
-        user.setUsername(request.getUsername());
-        user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(User.Role.SPECTATOR);
-        user = userRepository.save(user);
-        
-        // Create Spectator
+        // Create Spectator with flattened structure
         Spectator spectator = new Spectator();
-        spectator.setUser(user);
-        spectator.setFirstName(request.getFirstName());
-        spectator.setLastName(request.getLastName());
+        spectator.setUserType(UserType.SPECTATOR);
+        spectator.setUsername(request.getUsername());
+        spectator.setName(request.getFirstName() + " " + request.getLastName());
+        spectator.setEmail(request.getEmail());
+        spectator.setPassword(passwordEncoder.encode(request.getPassword()));
         spectator.setBio(request.getBio());
         spectator.setBirthDate(request.getBirthDate());
         spectator.setProfilePhotoUrl(request.getProfilePhotoUrl());
+        
         if (request.getFavoriteTeamId() != null) {
             Organization favoriteTeam = organizationRepository.findById(request.getFavoriteTeamId())
                     .orElseThrow(() -> new ResourceNotFoundException("Organization", "id", request.getFavoriteTeamId()));
@@ -160,35 +173,29 @@ public class AuthService {
         spectator = spectatorRepository.save(spectator);
         
         Map<String, Object> extraClaims = new HashMap<>();
-        extraClaims.put("role", user.getRole().name());
-        extraClaims.put("userId", user.getId());
+        extraClaims.put("role", spectator.getUserType().name());
+        extraClaims.put("userId", spectator.getId());
         extraClaims.put("spectatorId", spectator.getId());
         
-        String token = jwtUtil.generateToken(user, extraClaims);
+        String token = jwtUtil.generateToken(spectator, extraClaims);
         
-        return new AuthResponse(token, user.getId(), user.getUsername(), user.getEmail(), user.getRole(), spectator.getId());
+        return new AuthResponse(token, spectator.getId(), spectator.getUsername(), spectator.getEmail(), 
+                User.Role.valueOf(spectator.getUserType().name()), spectator.getId());
     }
     
     private void validateUniqueCredentials(String username, String email) {
-        if (userRepository.existsByUsername(username)) {
+        // Check username uniqueness across all entity types
+        if (playerRepository.findByUsername(username).isPresent() ||
+            organizationRepository.findByUsername(username).isPresent() ||
+            spectatorRepository.findByUsername(username).isPresent()) {
             throw new BusinessException("Username '" + username + "' already exists");
         }
-        if (userRepository.existsByEmail(email)) {
+        
+        // Check email uniqueness across all entity types
+        if (playerRepository.findByEmail(email).isPresent() ||
+            organizationRepository.findByEmail(email).isPresent() ||
+            spectatorRepository.findByEmail(email).isPresent()) {
             throw new BusinessException("Email '" + email + "' already exists");
         }
-    }
-    
-    private Long getProfileIdByUserAndRole(User user) {
-        return switch (user.getRole()) {
-            case PLAYER -> playerRepository.findByUserId(user.getId())
-                .map(Player::getId)
-                .orElse(null);
-            case ORGANIZATION -> organizationRepository.findByUserId(user.getId())
-                .map(Organization::getId)
-                .orElse(null);
-            case SPECTATOR -> spectatorRepository.findByUserId(user.getId())
-                .map(Spectator::getId)
-                .orElse(null);
-        };
     }
 }

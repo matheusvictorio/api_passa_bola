@@ -71,14 +71,14 @@ public class GameController {
     }
     
     @PostMapping
-    @PreAuthorize("hasRole('ORGANIZATION')")
+    @PreAuthorize("hasRole('ORGANIZATION') or hasRole('PLAYER')")
     public ResponseEntity<GameResponse> createGame(@Valid @RequestBody GameRequest request) {
         GameResponse createdGame = gameService.create(request);
         return ResponseEntity.ok(createdGame);
     }
     
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ORGANIZATION')")
+    @PreAuthorize("hasRole('ORGANIZATION') or hasRole('PLAYER')")
     public ResponseEntity<GameResponse> updateGame(
             @PathVariable Long id,
             @Valid @RequestBody GameRequest request) {
@@ -87,14 +87,14 @@ public class GameController {
     }
     
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ORGANIZATION')")
+    @PreAuthorize("hasRole('ORGANIZATION') or hasRole('PLAYER')")
     public ResponseEntity<Void> deleteGame(@PathVariable Long id) {
         gameService.delete(id);
         return ResponseEntity.noContent().build();
     }
     
     @PatchMapping("/{id}/score")
-    @PreAuthorize("hasRole('ORGANIZATION')")
+    @PreAuthorize("hasRole('ORGANIZATION') or hasRole('PLAYER')")
     public ResponseEntity<GameResponse> updateGameScore(
             @PathVariable Long id,
             @RequestParam Integer homeGoals,

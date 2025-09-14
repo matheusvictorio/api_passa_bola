@@ -39,7 +39,7 @@ public class PlayerService {
     }
     
     public PlayerResponse findByUsername(String username) {
-        Player player = playerRepository.findByUserUsername(username)
+        Player player = playerRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Player", "username", username));
         return convertToResponse(player);
     }
@@ -54,31 +54,22 @@ public class PlayerService {
                 .map(this::convertToResponse);
     }
     
-    public Page<PlayerResponse> findByPosition(Player.Position position, Pageable pageable) {
-        return playerRepository.findByPosition(position, pageable)
-                .map(this::convertToResponse);
-    }
     
     public PlayerResponse update(Long id, PlayerRequest request) {
         Player player = playerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Player", "id", id));
         
-        // Validate jersey number uniqueness within organization
-        if (request.getJerseyNumber() != null && request.getOrganizationId() != null) {
-            playerRepository.findByJerseyNumberAndOrganizationId(request.getJerseyNumber(), request.getOrganizationId())
-                    .filter(p -> !p.getId().equals(id))
-                    .ifPresent(p -> {
-                        throw new BusinessException("Jersey number " + request.getJerseyNumber() + " is already taken in this organization");
-                    });
-        }
         
-        player.setFirstName(request.getFirstName());
-        player.setLastName(request.getLastName());
+        player.setUsername(request.getUsername());
+        player.setName(request.getName());
+        player.setEmail(request.getEmail());
         player.setBio(request.getBio());
         player.setBirthDate(request.getBirthDate());
-        player.setPosition(request.getPosition());
         player.setProfilePhotoUrl(request.getProfilePhotoUrl());
-        player.setJerseyNumber(request.getJerseyNumber());
+        player.setBannerUrl(request.getBannerUrl());
+        player.setPhone(request.getPhone());
+        player.setPastOrganization(request.getPastOrganization());
+        player.setGamesPlayed(request.getGamesPlayed());
         
         if (request.getOrganizationId() != null) {
             Organization organization = organizationRepository.findById(request.getOrganizationId())
@@ -154,20 +145,19 @@ public class PlayerService {
     private PlayerResponse convertToResponse(Player player) {
         PlayerResponse response = new PlayerResponse();
         response.setId(player.getId());
-        response.setUserId(player.getUser().getId());
-        response.setUsername(player.getUser().getUsername());
-        response.setEmail(player.getUser().getEmail());
-        response.setFirstName(player.getFirstName());
-        response.setLastName(player.getLastName());
-        response.setFullName(player.getFullName());
+        response.setUserType(player.getUserType());
+        response.setUsername(player.getUsername());
+        response.setName(player.getName());
+        response.setEmail(player.getEmail());
         response.setBio(player.getBio());
         response.setBirthDate(player.getBirthDate());
-        response.setPosition(player.getPosition());
         response.setProfilePhotoUrl(player.getProfilePhotoUrl());
-        response.setJerseyNumber(player.getJerseyNumber());
+        response.setBannerUrl(player.getBannerUrl());
+        response.setPhone(player.getPhone());
+        response.setPastOrganization(player.getPastOrganization());
+        response.setGamesPlayed(player.getGamesPlayed());
         response.setFollowersCount(player.getFollowersCount());
         response.setFollowingCount(player.getFollowingCount());
-        response.setPostsCount(postRepository.countByPlayerId(player.getId()).intValue());
         response.setCreatedAt(player.getCreatedAt());
         response.setUpdatedAt(player.getUpdatedAt());
         
@@ -175,9 +165,6 @@ public class PlayerService {
             OrganizationSummaryResponse orgResponse = new OrganizationSummaryResponse();
             orgResponse.setId(player.getOrganization().getId());
             orgResponse.setName(player.getOrganization().getName());
-            orgResponse.setLogoUrl(player.getOrganization().getLogoUrl());
-            orgResponse.setCity(player.getOrganization().getCity());
-            orgResponse.setState(player.getOrganization().getState());
             response.setOrganization(orgResponse);
         }
         
@@ -187,20 +174,14 @@ public class PlayerService {
     public PlayerSummaryResponse convertToSummaryResponse(Player player) {
         PlayerSummaryResponse response = new PlayerSummaryResponse();
         response.setId(player.getId());
-        response.setUsername(player.getUser().getUsername());
-        response.setFirstName(player.getFirstName());
-        response.setLastName(player.getLastName());
-        response.setFullName(player.getFullName());
+        response.setUsername(player.getUsername());
+        response.setName(player.getName());
         response.setProfilePhotoUrl(player.getProfilePhotoUrl());
-        response.setPosition(player.getPosition());
         
         if (player.getOrganization() != null) {
             OrganizationSummaryResponse orgResponse = new OrganizationSummaryResponse();
             orgResponse.setId(player.getOrganization().getId());
             orgResponse.setName(player.getOrganization().getName());
-            orgResponse.setLogoUrl(player.getOrganization().getLogoUrl());
-            orgResponse.setCity(player.getOrganization().getCity());
-            orgResponse.setState(player.getOrganization().getState());
             response.setOrganization(orgResponse);
         }
         

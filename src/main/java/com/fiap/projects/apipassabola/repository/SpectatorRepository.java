@@ -13,19 +13,14 @@ import java.util.Optional;
 @Repository
 public interface SpectatorRepository extends JpaRepository<Spectator, Long> {
     
-    Optional<Spectator> findByUserId(Long userId);
+    Optional<Spectator> findByUsername(String username);
     
-    Optional<Spectator> findByUserUsername(String username);
+    Optional<Spectator> findByEmail(String email);
     
-    @Query("SELECT s FROM Spectator s WHERE LOWER(s.firstName) LIKE LOWER(CONCAT('%', :name, '%')) OR LOWER(s.lastName) LIKE LOWER(CONCAT('%', :name, '%'))")
+    @Query("SELECT s FROM Spectator s WHERE LOWER(s.name) LIKE LOWER(CONCAT('%', :name, '%'))")
     Page<Spectator> findByNameContainingIgnoreCase(@Param("name") String name, Pageable pageable);
     
     @Query("SELECT s FROM Spectator s WHERE s.favoriteTeam.id = :teamId")
     Page<Spectator> findByFavoriteTeamId(@Param("teamId") Long teamId, Pageable pageable);
     
-    @Query("SELECT COUNT(p) FROM Spectator s JOIN s.followedPlayers p WHERE s.id = :spectatorId")
-    Long countFollowedPlayersBySpectatorId(@Param("spectatorId") Long spectatorId);
-    
-    @Query("SELECT COUNT(o) FROM Spectator s JOIN s.followedOrganizations o WHERE s.id = :spectatorId")
-    Long countFollowedOrganizationsBySpectatorId(@Param("spectatorId") Long spectatorId);
 }

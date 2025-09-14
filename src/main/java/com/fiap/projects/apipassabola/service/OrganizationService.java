@@ -38,7 +38,7 @@ public class OrganizationService {
     }
     
     public OrganizationResponse findByUsername(String username) {
-        Organization organization = organizationRepository.findByUserUsername(username)
+        Organization organization = organizationRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Organization", "username", username));
         return convertToResponse(organization);
     }
@@ -48,20 +48,6 @@ public class OrganizationService {
                 .map(this::convertToResponse);
     }
     
-    public Page<OrganizationResponse> findByCity(String city, Pageable pageable) {
-        return organizationRepository.findByCityIgnoreCase(city, pageable)
-                .map(this::convertToResponse);
-    }
-    
-    public Page<OrganizationResponse> findByState(String state, Pageable pageable) {
-        return organizationRepository.findByStateIgnoreCase(state, pageable)
-                .map(this::convertToResponse);
-    }
-    
-    public Page<OrganizationResponse> findByFoundedYear(Integer foundedYear, Pageable pageable) {
-        return organizationRepository.findByFoundedYear(foundedYear, pageable)
-                .map(this::convertToResponse);
-    }
     
     public OrganizationResponse update(Long id, OrganizationRequest request) {
         Organization organization = organizationRepository.findById(id)
@@ -76,16 +62,14 @@ public class OrganizationService {
             }
         }
         
+        organization.setUsername(request.getUsername());
         organization.setName(request.getName());
-        organization.setDescription(request.getDescription());
-        organization.setCity(request.getCity());
-        organization.setState(request.getState());
-        organization.setLogoUrl(request.getLogoUrl());
-        organization.setPrimaryColors(request.getPrimaryColors());
-        organization.setFoundedYear(request.getFoundedYear());
-        organization.setWebsiteUrl(request.getWebsiteUrl());
-        organization.setContactEmail(request.getContactEmail());
-        organization.setContactPhone(request.getContactPhone());
+        organization.setEmail(request.getEmail());
+        organization.setBio(request.getBio());
+        organization.setProfilePhotoUrl(request.getProfilePhotoUrl());
+        organization.setBannerUrl(request.getBannerUrl());
+        organization.setPhone(request.getPhone());
+        organization.setGamesPlayed(request.getGamesPlayed());
         organization.setCnpj(normalizedCnpj);
         
         Organization savedOrganization = organizationRepository.save(organization);
@@ -109,22 +93,18 @@ public class OrganizationService {
     private OrganizationResponse convertToResponse(Organization organization) {
         OrganizationResponse response = new OrganizationResponse();
         response.setId(organization.getId());
-        response.setUserId(organization.getUser().getId());
-        response.setUsername(organization.getUser().getUsername());
-        response.setEmail(organization.getUser().getEmail());
+        response.setUserType(organization.getUserType());
+        response.setUsername(organization.getUsername());
         response.setName(organization.getName());
-        response.setDescription(organization.getDescription());
-        response.setCity(organization.getCity());
-        response.setState(organization.getState());
-        response.setLogoUrl(organization.getLogoUrl());
-        response.setPrimaryColors(organization.getPrimaryColors());
-        response.setFoundedYear(organization.getFoundedYear());
-        response.setWebsiteUrl(organization.getWebsiteUrl());
-        response.setContactEmail(organization.getContactEmail());
-        response.setContactPhone(organization.getContactPhone());
+        response.setEmail(organization.getEmail());
         response.setCnpj(CnpjValidator.format(organization.getCnpj()));
-        response.setPlayersCount(playerRepository.countByOrganizationId(organization.getId()).intValue());
-        response.setTotalGames(gameRepository.countByHomeTeamIdOrAwayTeamId(organization.getId(), organization.getId()).intValue());
+        response.setBio(organization.getBio());
+        response.setProfilePhotoUrl(organization.getProfilePhotoUrl());
+        response.setBannerUrl(organization.getBannerUrl());
+        response.setPhone(organization.getPhone());
+        response.setGamesPlayed(organization.getGamesPlayed());
+        response.setFollowersCount(organization.getFollowersCount());
+        response.setFollowingCount(organization.getFollowingCount());
         response.setCreatedAt(organization.getCreatedAt());
         response.setUpdatedAt(organization.getUpdatedAt());
         
@@ -135,9 +115,6 @@ public class OrganizationService {
         OrganizationSummaryResponse response = new OrganizationSummaryResponse();
         response.setId(organization.getId());
         response.setName(organization.getName());
-        response.setLogoUrl(organization.getLogoUrl());
-        response.setCity(organization.getCity());
-        response.setState(organization.getState());
         
         return response;
     }

@@ -4,9 +4,14 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -14,57 +19,77 @@ import java.util.Set;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Organization {
+public class Organization implements UserDetails {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @OneToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "user_id", referencedColumnName = "id")
-    private User user;
+    // User fields flattened
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserType userType = UserType.ORGANIZATION;
+    
+    @Column(unique = true, nullable = false)
+    private String username;
     
     @Column(nullable = false)
     private String name;
     
-    @Column(columnDefinition = "TEXT")
-    private String description;
-    
-    @Column(nullable = false)
-    private String city;
-    
-    @Column(nullable = false)
-    private String state;
-    
-    @Column(name = "logo_url")
-    private String logoUrl;
-    
-    @Column(name = "primary_colors")
-    private String primaryColors;
-    
-    @Column(name = "founded_year")
-    private Integer foundedYear;
-    
-    @Column(name = "website_url")
-    private String websiteUrl;
-    
-    @Column(name = "contact_email")
-    private String contactEmail;
-    
-    @Column(name = "contact_phone")
-    private String contactPhone;
+    @Column(unique = true, nullable = false)
+    private String email;
     
     @Column(name = "cnpj", unique = true, nullable = false, length = 14)
     private String cnpj;
     
-    @OneToMany(mappedBy = "organization", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private Set<Player> players = new HashSet<>();
+    @Column(nullable = false)
+    private String password;
     
-    @OneToMany(mappedBy = "homeTeam", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private Set<Game> homeGames = new HashSet<>();
+    private String bio;
     
-    @OneToMany(mappedBy = "awayTeam", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private Set<Game> awayGames = new HashSet<>();
+    @Column(name = "profile_photo_url")
+    private String profilePhotoUrl;
+    
+    @Column(name = "banner_url")
+    private String bannerUrl;
+    
+    private String phone;
+    
+    @Column(name = "games_played")
+    private Integer gamesPlayed = 0;
+    
+    
+    @ManyToMany
+    @JoinTable(
+        name = "organization_followers",
+        joinColumns = @JoinColumn(name = "followed_id"),
+        inverseJoinColumns = @JoinColumn(name = "follower_id")
+    )
+    private Set<Organization> followers = new HashSet<>();
+    
+    @ManyToMany(mappedBy = "followers")
+    private Set<Organization> following = new HashSet<>();
+    
+    @ManyToMany(mappedBy = "teams")
+    private Set<Player> teams = new HashSet<>();
+    
+    // Games where this organization is either home or away team
+    // Note: This is a derived relationship, not stored directly
+    @Transient
+    private Set<Game> createdGames = new HashSet<>();
+    
+    @ManyToMany
+    @JoinTable(
+        name = "organization_subscribed_games",
+        joinColumns = @JoinColumn(name = "organization_id"),
+        inverseJoinColumns = @JoinColumn(name = "game_id")
+    )
+    private Set<Game> subscribedGames = new HashSet<>();
+    
+    // Posts created by this organization
+    // Note: This is a derived relationship, not stored directly
+    @Transient
+    private Set<Post> posts = new HashSet<>();
     
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -83,14 +108,50 @@ public class Organization {
         updatedAt = LocalDateTime.now();
     }
     
+    
     // Helper methods
-    public int getPlayersCount() {
-        return players != null ? players.size() : 0;
+    
+    public int getFollowersCount() {
+        return followers != null ? followers.size() : 0;
     }
     
-    public int getTotalGames() {
-        int homeGamesCount = homeGames != null ? homeGames.size() : 0;
-        int awayGamesCount = awayGames != null ? awayGames.size() : 0;
-        return homeGamesCount + awayGamesCount;
+    public int getFollowingCount() {
+        return following != null ? following.size() : 0;
+    }
+    
+    // UserDetails implementation
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return List.of(new SimpleGrantedAuthority("ROLE_" + userType.name()));
+    }
+    
+    @Override
+    public String getPassword() {
+        return password;
+    }
+    
+    @Override
+    public String getUsername() {
+        return email; // Return email for Spring Security authentication
+    }
+    
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+    
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+    
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+    
+    @Override
+    public boolean isEnabled() {
+        return true;
     }
 }

@@ -35,7 +35,7 @@ public class SpectatorService {
     }
     
     public SpectatorResponse findByUsername(String username) {
-        Spectator spectator = spectatorRepository.findByUserUsername(username)
+        Spectator spectator = spectatorRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Spectator", "username", username));
         return convertToResponse(spectator);
     }
@@ -54,11 +54,14 @@ public class SpectatorService {
         Spectator spectator = spectatorRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Spectator", "id", id));
         
-        spectator.setFirstName(request.getFirstName());
-        spectator.setLastName(request.getLastName());
+        spectator.setUsername(request.getUsername());
+        spectator.setName(request.getName());
+        spectator.setEmail(request.getEmail());
         spectator.setBio(request.getBio());
         spectator.setBirthDate(request.getBirthDate());
+        spectator.setPhone(request.getPhone());
         spectator.setProfilePhotoUrl(request.getProfilePhotoUrl());
+        spectator.setBannerUrl(request.getBannerUrl());
         
         if (request.getFavoriteTeamId() != null) {
             Organization favoriteTeam = organizationRepository.findById(request.getFavoriteTeamId())
@@ -82,17 +85,17 @@ public class SpectatorService {
     private SpectatorResponse convertToResponse(Spectator spectator) {
         SpectatorResponse response = new SpectatorResponse();
         response.setId(spectator.getId());
-        response.setUserId(spectator.getUser().getId());
-        response.setUsername(spectator.getUser().getUsername());
-        response.setEmail(spectator.getUser().getEmail());
-        response.setFirstName(spectator.getFirstName());
-        response.setLastName(spectator.getLastName());
-        response.setFullName(spectator.getFullName());
+        response.setUserType(spectator.getUserType());
+        response.setUsername(spectator.getUsername());
+        response.setName(spectator.getName());
+        response.setEmail(spectator.getEmail());
         response.setBio(spectator.getBio());
         response.setBirthDate(spectator.getBirthDate());
+        response.setPhone(spectator.getPhone());
         response.setProfilePhotoUrl(spectator.getProfilePhotoUrl());
-        response.setFollowedPlayersCount(spectatorRepository.countFollowedPlayersBySpectatorId(spectator.getId()).intValue());
-        response.setFollowedOrganizationsCount(spectatorRepository.countFollowedOrganizationsBySpectatorId(spectator.getId()).intValue());
+        response.setBannerUrl(spectator.getBannerUrl());
+        response.setFollowersCount(spectator.getFollowersCount());
+        response.setFollowingCount(spectator.getFollowingCount());
         response.setCreatedAt(spectator.getCreatedAt());
         response.setUpdatedAt(spectator.getUpdatedAt());
         
@@ -101,9 +104,6 @@ public class SpectatorService {
             OrganizationSummaryResponse favoriteTeamResponse = new OrganizationSummaryResponse();
             favoriteTeamResponse.setId(spectator.getFavoriteTeam().getId());
             favoriteTeamResponse.setName(spectator.getFavoriteTeam().getName());
-            favoriteTeamResponse.setLogoUrl(spectator.getFavoriteTeam().getLogoUrl());
-            favoriteTeamResponse.setCity(spectator.getFavoriteTeam().getCity());
-            favoriteTeamResponse.setState(spectator.getFavoriteTeam().getState());
             response.setFavoriteTeam(favoriteTeamResponse);
         }
         

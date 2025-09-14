@@ -47,29 +47,6 @@ public class OrganizationController {
         return ResponseEntity.ok(organizations);
     }
     
-    @GetMapping("/city/{city}")
-    public ResponseEntity<Page<OrganizationResponse>> getOrganizationsByCity(
-            @PathVariable String city,
-            @PageableDefault(size = 20) Pageable pageable) {
-        Page<OrganizationResponse> organizations = organizationService.findByCity(city, pageable);
-        return ResponseEntity.ok(organizations);
-    }
-    
-    @GetMapping("/state/{state}")
-    public ResponseEntity<Page<OrganizationResponse>> getOrganizationsByState(
-            @PathVariable String state,
-            @PageableDefault(size = 20) Pageable pageable) {
-        Page<OrganizationResponse> organizations = organizationService.findByState(state, pageable);
-        return ResponseEntity.ok(organizations);
-    }
-    
-    @GetMapping("/founded/{year}")
-    public ResponseEntity<Page<OrganizationResponse>> getOrganizationsByFoundedYear(
-            @PathVariable Integer year,
-            @PageableDefault(size = 20) Pageable pageable) {
-        Page<OrganizationResponse> organizations = organizationService.findByFoundedYear(year, pageable);
-        return ResponseEntity.ok(organizations);
-    }
     
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ORGANIZATION')")

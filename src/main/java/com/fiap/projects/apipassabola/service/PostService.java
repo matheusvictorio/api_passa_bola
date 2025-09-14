@@ -2,13 +2,10 @@ package com.fiap.projects.apipassabola.service;
 
 import com.fiap.projects.apipassabola.dto.request.PostRequest;
 import com.fiap.projects.apipassabola.dto.response.PostResponse;
-import com.fiap.projects.apipassabola.entity.Player;
-import com.fiap.projects.apipassabola.entity.Post;
-import com.fiap.projects.apipassabola.entity.User;
+import com.fiap.projects.apipassabola.entity.*;
 import com.fiap.projects.apipassabola.exception.BusinessException;
 import com.fiap.projects.apipassabola.exception.ResourceNotFoundException;
-import com.fiap.projects.apipassabola.repository.PlayerRepository;
-import com.fiap.projects.apipassabola.repository.PostRepository;
+import com.fiap.projects.apipassabola.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,7 +21,8 @@ public class PostService {
     
     private final PostRepository postRepository;
     private final PlayerRepository playerRepository;
-    private final PlayerService playerService;
+    private final OrganizationRepository organizationRepository;
+    private final SpectatorRepository spectatorRepository;
     private final UserContextService userContextService;
     
     public Page<PostResponse> findAll(Pageable pageable) {
@@ -48,8 +46,8 @@ public class PostService {
     }
     
     public Page<PostResponse> findByCurrentUser(Pageable pageable) {
-        User currentUser = userContextService.getCurrentUser();
-        return postRepository.findByAuthorId(currentUser.getId(), pageable)
+        Long currentUserId = userContextService.getCurrentUserId();
+        return postRepository.findByAuthorId(currentUserId, pageable)
                 .map(this::convertToResponse);
     }
     
@@ -79,7 +77,9 @@ public class PostService {
     }
     
     public PostResponse create(PostRequest request) {
-        User currentUser = userContextService.getCurrentUser();
+        Long currentUserId = userContextService.getCurrentUserId();
+        UserType currentUserType = userContextService.getCurrentUserType();
+        String currentUsername = userContextService.getCurrentUsername();
         
         // Auto-detect player if the current user is a PLAYER and no specific playerId is provided
         if (request.getPlayerId() != null) {
@@ -89,7 +89,9 @@ public class PostService {
         }
         
         Post post = new Post();
-        post.setAuthor(currentUser);
+        post.setAuthorId(currentUserId);
+        post.setAuthorUsername(currentUsername);
+        post.setAuthorType(currentUserType);
         post.setContent(request.getContent());
         post.setImageUrl(request.getImageUrl());
         post.setType(request.getType());
@@ -105,10 +107,10 @@ public class PostService {
         Post post = postRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Post", "id", id));
         
-        User currentUser = userContextService.getCurrentUser();
+        Long currentUserId = userContextService.getCurrentUserId();
         
         // Verify ownership - only the author can update their post
-        if (!post.isOwnedBy(currentUser)) {
+        if (!post.isOwnedBy(currentUserId)) {
             throw new BusinessException("You can only update your own posts");
         }
         
@@ -125,10 +127,10 @@ public class PostService {
         Post post = postRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Post", "id", id));
         
-        User currentUser = userContextService.getCurrentUser();
+        Long currentUserId = userContextService.getCurrentUserId();
         
         // Verify ownership - only the author can delete their post
-        if (!post.isOwnedBy(currentUser)) {
+        if (!post.isOwnedBy(currentUserId)) {
             throw new BusinessException("You can only delete your own posts");
         }
         
@@ -178,9 +180,9 @@ public class PostService {
     private PostResponse convertToResponse(Post post) {
         PostResponse response = new PostResponse();
         response.setId(post.getId());
-        response.setAuthorId(post.getAuthor().getId());
-        response.setAuthorUsername(post.getAuthor().getUsername());
-        response.setAuthorRole(post.getAuthor().getRole().name());
+        response.setAuthorId(post.getAuthorId());
+        response.setAuthorUsername(post.getAuthorUsername());
+        response.setAuthorRole(post.getAuthorType().name());
         response.setContent(post.getContent());
         response.setImageUrl(post.getImageUrl());
         response.setType(post.getType());

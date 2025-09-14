@@ -14,21 +14,16 @@ import java.util.Optional;
 @Repository
 public interface PlayerRepository extends JpaRepository<Player, Long> {
     
-    Optional<Player> findByUserId(Long userId);
+    Optional<Player> findByUsername(String username);
     
-    Optional<Player> findByUserUsername(String username);
+    Optional<Player> findByEmail(String email);
     
-    @Query("SELECT p FROM Player p WHERE LOWER(p.firstName) LIKE LOWER(CONCAT('%', :name, '%')) OR LOWER(p.lastName) LIKE LOWER(CONCAT('%', :name, '%'))")
+    @Query("SELECT p FROM Player p WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :name, '%'))")
     Page<Player> findByNameContainingIgnoreCase(@Param("name") String name, Pageable pageable);
     
     @Query("SELECT p FROM Player p WHERE p.organization.id = :organizationId")
     Page<Player> findByOrganizationId(@Param("organizationId") Long organizationId, Pageable pageable);
     
-    @Query("SELECT p FROM Player p WHERE p.position = :position")
-    Page<Player> findByPosition(@Param("position") Player.Position position, Pageable pageable);
-    
-    @Query("SELECT p FROM Player p WHERE p.jerseyNumber = :number AND p.organization.id = :organizationId")
-    Optional<Player> findByJerseyNumberAndOrganizationId(@Param("number") Integer number, @Param("organizationId") Long organizationId);
     
     @Query("SELECT COUNT(f) FROM Player p JOIN p.followers f WHERE p.id = :playerId")
     Long countFollowersByPlayerId(@Param("playerId") Long playerId);

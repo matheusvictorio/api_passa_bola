@@ -1,6 +1,5 @@
 package com.fiap.projects.apipassabola.dto.auth;
 
-import com.fiap.projects.apipassabola.entity.Player;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -25,24 +24,19 @@ public class PlayerRegistrationRequest {
     @Size(min = 6, message = "Password must be at least 6 characters")
     private String password;
     
-    @NotBlank(message = "First name is required")
-    private String firstName;
-    
-    @NotBlank(message = "Last name is required")
-    private String lastName;
+    @NotBlank(message = "Name is required")
+    private String name;
     
     private String bio;
     
     @Past(message = "Birth date must be in the past")
     private LocalDate birthDate;
     
-    private Player.Position position;
-    
     private String profilePhotoUrl;
-    
-    @Min(value = 1, message = "Jersey number must be positive")
-    @Max(value = 99, message = "Jersey number must be less than 100")
-    private Integer jerseyNumber;
+    private String bannerUrl;
+    private String phone;
+    private String pastOrganization;
+    private Integer gamesPlayed;
     
     private Long organizationId;
 }
