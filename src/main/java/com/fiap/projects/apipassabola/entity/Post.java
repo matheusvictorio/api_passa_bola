@@ -18,9 +18,15 @@ public class Post {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @ManyToOne
-    @JoinColumn(name = "player_id", nullable = false)
-    private Player player;
+    @Column(name = "author_id", nullable = false)
+    private Long authorId;
+    
+    @Column(name = "author_username", nullable = false)
+    private String authorUsername;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "author_type", nullable = false)
+    private UserType authorType;
     
     @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
@@ -48,7 +54,7 @@ public class Post {
     private LocalDateTime updatedAt;
     
     public enum PostType {
-        GENERAL, TRAINING, MATCH, ACHIEVEMENT, NEWS
+        GENERAL, TRAINING, MATCH, ACHIEVEMENT, NEWS, ORGANIZATION_UPDATE, SPECTATOR_OPINION
     }
     
     @PrePersist
@@ -63,7 +69,7 @@ public class Post {
     }
     
     // Helper methods
-    public void incrementLikes() {
+        public void incrementLikes() {
         this.likes++;
     }
     
@@ -85,5 +91,44 @@ public class Post {
         if (this.comments > 0) {
             this.comments--;
         }
+    }
+    
+    /**
+     * Checks if the post is owned by the given user entity
+     * @param userId The user ID to check ownership against
+     * @return true if the user owns this post, false otherwise
+     */
+    public boolean isOwnedBy(Long userId) {
+        return this.authorId != null && userId != null && this.authorId.equals(userId);
+    }
+    
+    /**
+     * Checks if the post is owned by a player
+     * @param player The player to check ownership against
+     * @return true if the player owns this post, false otherwise
+     */
+    public boolean isOwnedBy(Player player) {
+        return player != null && isOwnedBy(player.getId()) && 
+               UserType.PLAYER.equals(this.authorType);
+    }
+    
+    /**
+     * Checks if the post is owned by an organization
+     * @param organization The organization to check ownership against
+     * @return true if the organization owns this post, false otherwise
+     */
+    public boolean isOwnedBy(Organization organization) {
+        return organization != null && isOwnedBy(organization.getId()) && 
+               UserType.ORGANIZATION.equals(this.authorType);
+    }
+    
+    /**
+     * Checks if the post is owned by a spectator
+     * @param spectator The spectator to check ownership against
+     * @return true if the spectator owns this post, false otherwise
+     */
+    public boolean isOwnedBy(Spectator spectator) {
+        return spectator != null && isOwnedBy(spectator.getId()) && 
+               UserType.SPECTATOR.equals(this.authorType);
     }
 }

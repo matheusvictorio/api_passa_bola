@@ -56,13 +56,6 @@ public class PlayerController {
         return ResponseEntity.ok(players);
     }
     
-    @GetMapping("/position/{position}")
-    public ResponseEntity<Page<PlayerResponse>> getPlayersByPosition(
-            @PathVariable Player.Position position,
-            @PageableDefault(size = 20) Pageable pageable) {
-        Page<PlayerResponse> players = playerService.findByPosition(position, pageable);
-        return ResponseEntity.ok(players);
-    }
     
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('PLAYER') or hasRole('ORGANIZATION')")

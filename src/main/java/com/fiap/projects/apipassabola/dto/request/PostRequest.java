@@ -11,7 +11,7 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class PostRequest {
     
-    @NotNull(message = "Player ID is required")
+    // Optional: Only used for backward compatibility or when creating posts for specific players
     private Long playerId;
     
     @NotBlank(message = "Content is required")

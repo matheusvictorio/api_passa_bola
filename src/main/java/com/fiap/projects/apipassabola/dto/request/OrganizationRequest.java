@@ -1,5 +1,7 @@
 package com.fiap.projects.apipassabola.dto.request;
 
+import com.fiap.projects.apipassabola.entity.UserType;
+import com.fiap.projects.apipassabola.validation.ValidCnpj;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,29 +12,33 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class OrganizationRequest {
     
+    private UserType userType = UserType.ORGANIZATION;
+    
+    @NotBlank(message = "Username is required")
+    private String username;
+    
     @NotBlank(message = "Organization name is required")
     private String name;
     
-    private String description;
+    @NotBlank(message = "Email is required")
+    @Email(message = "Email should be valid")
+    private String email;
     
-    @NotBlank(message = "City is required")
-    private String city;
+    @NotBlank(message = "CNPJ is required")
+    @ValidCnpj(message = "CNPJ format is invalid")
+    private String cnpj;
     
-    @NotBlank(message = "State is required")
-    private String state;
+    @NotBlank(message = "Password is required")
+    @Size(min = 6, message = "Password must be at least 6 characters")
+    private String password;
     
-    private String logoUrl;
+    private String bio;
     
-    private String primaryColors;
+    private String profilePhotoUrl;
     
-    @Min(value = 1800, message = "Founded year must be after 1800")
-    @Max(value = 2024, message = "Founded year cannot be in the future")
-    private Integer foundedYear;
+    private String bannerUrl;
     
-    private String websiteUrl;
+    private String phone;
     
-    @Email(message = "Contact email should be valid")
-    private String contactEmail;
-    
-    private String contactPhone;
+    private Integer gamesPlayed;
 }

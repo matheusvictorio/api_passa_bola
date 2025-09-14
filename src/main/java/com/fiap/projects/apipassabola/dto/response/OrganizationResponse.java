@@ -1,10 +1,12 @@
 package com.fiap.projects.apipassabola.dto.response;
 
+import com.fiap.projects.apipassabola.entity.UserType;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 
 @Data
 @NoArgsConstructor
@@ -12,21 +14,24 @@ import java.time.LocalDateTime;
 public class OrganizationResponse {
     
     private Long id;
-    private Long userId;
+    private UserType userType;
     private String username;
-    private String email;
     private String name;
-    private String description;
-    private String city;
-    private String state;
-    private String logoUrl;
-    private String primaryColors;
-    private Integer foundedYear;
-    private String websiteUrl;
-    private String contactEmail;
-    private String contactPhone;
-    private int playersCount;
-    private int totalGames;
+    private String email;
+    private String cnpj;
+    private String bio;
+    private String profilePhotoUrl;
+    private String bannerUrl;
+    private String phone;
+    private Integer gamesPlayed;
+    
+    // Collections
+    private int followersCount;
+    private int followingCount;
+    private Set<PlayerSummaryResponse> teams;
+    private Set<GameSummaryResponse> createdGames;
+    private Set<GameSummaryResponse> subscribedGames;
+    private Set<PostSummaryResponse> posts;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

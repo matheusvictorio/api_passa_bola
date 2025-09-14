@@ -42,6 +42,30 @@ public class PostController {
         return ResponseEntity.ok(posts);
     }
     
+    @GetMapping("/author/{authorId}")
+    public ResponseEntity<Page<PostResponse>> getPostsByAuthor(
+            @PathVariable Long authorId,
+            @PageableDefault(size = 20) Pageable pageable) {
+        Page<PostResponse> posts = postService.findByAuthor(authorId, pageable);
+        return ResponseEntity.ok(posts);
+    }
+    
+    @GetMapping("/my-posts")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Page<PostResponse>> getMyPosts(
+            @PageableDefault(size = 20) Pageable pageable) {
+        Page<PostResponse> posts = postService.findByCurrentUser(pageable);
+        return ResponseEntity.ok(posts);
+    }
+    
+    @GetMapping("/role/{role}")
+    public ResponseEntity<Page<PostResponse>> getPostsByRole(
+            @PathVariable String role,
+            @PageableDefault(size = 20) Pageable pageable) {
+        Page<PostResponse> posts = postService.findByRole(role, pageable);
+        return ResponseEntity.ok(posts);
+    }
+    
     @GetMapping("/type/{type}")
     public ResponseEntity<Page<PostResponse>> getPostsByType(
             @PathVariable Post.PostType type,
@@ -73,14 +97,14 @@ public class PostController {
     }
     
     @PostMapping
-    @PreAuthorize("hasRole('PLAYER')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<PostResponse> createPost(@Valid @RequestBody PostRequest request) {
         PostResponse createdPost = postService.create(request);
         return ResponseEntity.ok(createdPost);
     }
     
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('PLAYER')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<PostResponse> updatePost(
             @PathVariable Long id,
             @Valid @RequestBody PostRequest request) {
@@ -89,7 +113,7 @@ public class PostController {
     }
     
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('PLAYER')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> deletePost(@PathVariable Long id) {
         postService.delete(id);
         return ResponseEntity.noContent().build();
