@@ -55,6 +55,10 @@ public class Organization implements UserDetails {
     
     private String phone;
     
+    private String city;
+    
+    private String state;
+    
     @Column(name = "games_played")
     private Integer gamesPlayed = 0;
     
@@ -117,6 +121,11 @@ public class Organization implements UserDetails {
     
     public int getFollowingCount() {
         return following != null ? following.size() : 0;
+    }
+    
+    // Method to get the real username field (not email)
+    public String getRealUsername() {
+        return username;
     }
     
     // UserDetails implementation

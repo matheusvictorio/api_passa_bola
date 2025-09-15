@@ -86,7 +86,7 @@ public class SpectatorService {
         SpectatorResponse response = new SpectatorResponse();
         response.setId(spectator.getId());
         response.setUserType(spectator.getUserType());
-        response.setUsername(spectator.getUsername());
+        response.setUsername(spectator.getRealUsername()); // Use getRealUsername() to get actual username, not email
         response.setName(spectator.getName());
         response.setEmail(spectator.getEmail());
         response.setBio(spectator.getBio());

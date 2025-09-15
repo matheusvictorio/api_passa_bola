@@ -146,7 +146,7 @@ public class PlayerService {
         PlayerResponse response = new PlayerResponse();
         response.setId(player.getId());
         response.setUserType(player.getUserType());
-        response.setUsername(player.getUsername());
+        response.setUsername(player.getRealUsername()); // Use getRealUsername() to get actual username, not email
         response.setName(player.getName());
         response.setEmail(player.getEmail());
         response.setBio(player.getBio());
@@ -174,7 +174,7 @@ public class PlayerService {
     public PlayerSummaryResponse convertToSummaryResponse(Player player) {
         PlayerSummaryResponse response = new PlayerSummaryResponse();
         response.setId(player.getId());
-        response.setUsername(player.getUsername());
+        response.setUsername(player.getRealUsername()); // Use getRealUsername() to get actual username, not email
         response.setName(player.getName());
         response.setProfilePhotoUrl(player.getProfilePhotoUrl());
         

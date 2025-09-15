@@ -69,6 +69,8 @@ public class OrganizationService {
         organization.setProfilePhotoUrl(request.getProfilePhotoUrl());
         organization.setBannerUrl(request.getBannerUrl());
         organization.setPhone(request.getPhone());
+        organization.setCity(request.getCity());
+        organization.setState(request.getState());
         organization.setGamesPlayed(request.getGamesPlayed());
         organization.setCnpj(normalizedCnpj);
         
@@ -94,7 +96,7 @@ public class OrganizationService {
         OrganizationResponse response = new OrganizationResponse();
         response.setId(organization.getId());
         response.setUserType(organization.getUserType());
-        response.setUsername(organization.getUsername());
+        response.setUsername(organization.getRealUsername()); // Use getRealUsername() to get actual username, not email
         response.setName(organization.getName());
         response.setEmail(organization.getEmail());
         response.setCnpj(CnpjValidator.format(organization.getCnpj()));
@@ -102,6 +104,8 @@ public class OrganizationService {
         response.setProfilePhotoUrl(organization.getProfilePhotoUrl());
         response.setBannerUrl(organization.getBannerUrl());
         response.setPhone(organization.getPhone());
+        response.setCity(organization.getCity());
+        response.setState(organization.getState());
         response.setGamesPlayed(organization.getGamesPlayed());
         response.setFollowersCount(organization.getFollowersCount());
         response.setFollowingCount(organization.getFollowingCount());
@@ -115,6 +119,9 @@ public class OrganizationService {
         OrganizationSummaryResponse response = new OrganizationSummaryResponse();
         response.setId(organization.getId());
         response.setName(organization.getName());
+        response.setLogoUrl(organization.getProfilePhotoUrl()); // Using profilePhotoUrl as logoUrl
+        response.setCity(organization.getCity());
+        response.setState(organization.getState());
         
         return response;
     }
