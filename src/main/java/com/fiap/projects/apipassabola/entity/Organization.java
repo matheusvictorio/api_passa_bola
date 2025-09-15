@@ -55,6 +55,10 @@ public class Organization implements UserDetails {
     
     private String phone;
     
+    private String city;
+    
+    private String state;
+    
     @Column(name = "games_played")
     private Integer gamesPlayed = 0;
     

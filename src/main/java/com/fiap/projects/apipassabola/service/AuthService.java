@@ -134,6 +134,12 @@ public class AuthService {
         organization.setEmail(request.getEmail());
         organization.setPassword(passwordEncoder.encode(request.getPassword()));
         organization.setCnpj(normalizedCnpj);
+        organization.setBio(request.getBio());
+        organization.setProfilePhotoUrl(request.getProfilePhotoUrl());
+        organization.setBannerUrl(request.getBannerUrl());
+        organization.setPhone(request.getPhone());
+        organization.setCity(request.getCity());
+        organization.setState(request.getState());
         // Set default values for fields not in registration request
         organization.setGamesPlayed(0);
         

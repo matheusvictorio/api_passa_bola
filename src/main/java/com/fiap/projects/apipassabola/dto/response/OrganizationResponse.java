@@ -23,6 +23,8 @@ public class OrganizationResponse {
     private String profilePhotoUrl;
     private String bannerUrl;
     private String phone;
+    private String city;
+    private String state;
     private Integer gamesPlayed;
     
     // Collections
