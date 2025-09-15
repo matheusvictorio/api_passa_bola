@@ -96,7 +96,7 @@ public class OrganizationService {
         OrganizationResponse response = new OrganizationResponse();
         response.setId(organization.getId());
         response.setUserType(organization.getUserType());
-        response.setUsername(organization.getUsername());
+        response.setUsername(organization.getRealUsername()); // Use getRealUsername() to get actual username, not email
         response.setName(organization.getName());
         response.setEmail(organization.getEmail());
         response.setCnpj(CnpjValidator.format(organization.getCnpj()));

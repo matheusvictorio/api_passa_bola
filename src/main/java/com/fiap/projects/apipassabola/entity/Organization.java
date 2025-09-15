@@ -123,6 +123,11 @@ public class Organization implements UserDetails {
         return following != null ? following.size() : 0;
     }
     
+    // Method to get the real username field (not email)
+    public String getRealUsername() {
+        return username;
+    }
+    
     // UserDetails implementation
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

@@ -50,7 +50,7 @@ public class AuthService {
             extraClaims.put("userId", player.getId());
             
             String token = jwtUtil.generateToken(player, extraClaims);
-            return new AuthResponse(token, player.getId(), player.getUsername(), player.getEmail(), 
+            return new AuthResponse(token, player.getId(), player.getRealUsername(), player.getEmail(), 
                     User.Role.valueOf(player.getUserType().name()), player.getId());
         }
         
@@ -62,7 +62,7 @@ public class AuthService {
             extraClaims.put("userId", organization.getId());
             
             String token = jwtUtil.generateToken(organization, extraClaims);
-            return new AuthResponse(token, organization.getId(), organization.getUsername(), organization.getEmail(), 
+            return new AuthResponse(token, organization.getId(), organization.getRealUsername(), organization.getEmail(), 
                     User.Role.valueOf(organization.getUserType().name()), organization.getId());
         }
         
@@ -74,7 +74,7 @@ public class AuthService {
             extraClaims.put("userId", spectator.getId());
             
             String token = jwtUtil.generateToken(spectator, extraClaims);
-            return new AuthResponse(token, spectator.getId(), spectator.getUsername(), spectator.getEmail(), 
+            return new AuthResponse(token, spectator.getId(), spectator.getRealUsername(), spectator.getEmail(), 
                     User.Role.valueOf(spectator.getUserType().name()), spectator.getId());
         }
         
@@ -113,7 +113,7 @@ public class AuthService {
         
         String token = jwtUtil.generateToken(player, extraClaims);
         
-        return new AuthResponse(token, player.getId(), player.getUsername(), player.getEmail(), 
+        return new AuthResponse(token, player.getId(), player.getRealUsername(), player.getEmail(), 
                 User.Role.valueOf(player.getUserType().name()), player.getId());
     }
     
