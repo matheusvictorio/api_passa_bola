@@ -350,53 +350,123 @@ Authorization: Bearer <token>
 }
 ```
 
-### ⚽ Jogos (`/api/games`)
+### ⚽ Sistema de Jogos (`/api/games`)
+
+O sistema de jogos foi **completamente refatorado** para suportar **três tipos distintos de jogos**, cada um com suas próprias regras de negócio e funcionalidades específicas.
+
+#### 🎯 Tipos de Jogos Disponíveis
+
+| Tipo | Criado Por | Participação | Descrição |
+|------|------------|--------------|-----------|
+| **🤝 FRIENDLY** | Jogadoras | Individual ou Time | Jogos amistosos casuais |
+| **🏆 CHAMPIONSHIP** | Jogadoras | Individual ou Time | Jogos de campeonato competitivos |
+| **🏅 CUP** | Organizações | Sistema de Convites | Jogos oficiais de copa |
+
+#### 📊 Estrutura Atualizada do Game
+
+```json
+{
+  "id": 1,
+  "gameType": "FRIENDLY",
+  "gameName": "Pelada do Final de Semana",
+  "hostUsername": "maria_silva",
+  "hostId": 123,
+  "gameDate": "2024-12-15T15:00:00",
+  "venue": "Campo do Bairro",
+  "description": "Jogo descontraído entre amigas",
+  "status": "SCHEDULED",
+  "homeGoals": 0,
+  "awayGoals": 0,
+  "winner": null,
+  "winningTeamSide": null,
+  "createdAt": "2024-12-10T10:00:00",
+  "updatedAt": "2024-12-10T10:00:00"
+}
+```
+
+#### 🚀 Endpoints Principais
+
+##### 📍 Criação de Jogos por Tipo
 
 ```http
-# Listar todos
+# Criar Jogo Amistoso (requer auth PLAYER)
+POST /api/games/friendly
+Authorization: Bearer <token>
+{
+  "gameName": "Pelada do Final de Semana",
+  "gameDate": "2024-12-15T15:00:00",
+  "venue": "Campo do Bairro",
+  "description": "Jogo descontraído entre amigas"
+}
+
+# Criar Jogo de Campeonato (requer auth PLAYER)
+POST /api/games/championship
+Authorization: Bearer <token>
+{
+  "gameName": "Copa Feminina Regional",
+  "gameDate": "2024-12-20T16:00:00",
+  "venue": "Estádio Municipal",
+  "description": "Semifinal do campeonato regional"
+}
+
+# Criar Jogo de Copa (requer auth ORGANIZATION)
+POST /api/games/cup
+Authorization: Bearer <token>
+{
+  "homeTeamId": 1,
+  "awayTeamId": 2,
+  "gameDate": "2024-12-25T14:00:00",
+  "venue": "Arena Principal",
+  "championship": "Copa Nacional Feminina",
+  "round": "Final"
+}
+```
+
+##### 📍 Consultas por Tipo
+
+```http
+# Listar todos os jogos
 GET /api/games?page=0&size=20
+
+# Buscar por tipo específico
+GET /api/games/type/FRIENDLY?page=0&size=10
+GET /api/games/type/CHAMPIONSHIP?page=0&size=10
+GET /api/games/type/CUP?page=0&size=10
+
+# Buscar jogos criados por um host (jogadoras)
+GET /api/games/host/123?page=0&size=10
 
 # Buscar por ID
 GET /api/games/1
 
-# Buscar por organização
+# Buscar por organização (jogos de copa)
 GET /api/games/organization/1?page=0&size=10
 
 # Buscar por status
 GET /api/games/status/SCHEDULED?page=0&size=10
 
 # Buscar por campeonato
-GET /api/games/championship?championship=Brasileirão&page=0&size=10
+GET /api/games/championship?championship=Copa%20Nacional&page=0&size=10
+```
 
-# Criar jogo (requer auth ORGANIZATION ou PLAYER)
-POST /api/games
-Authorization: Bearer <token>
-{
-  "homeTeamId": 1,
-  "awayTeamId": 2,
-  "gameDate": "2024-12-15T15:00:00",
-  "venue": "Vila Belmiro",
-  "championship": "Brasileirão Feminino",
-  "round": "Semifinal"
-}
+##### 📍 Operações Gerais
 
-# Atualizar jogo (requer auth ORGANIZATION ou PLAYER)
+```http
+# Atualizar jogo (requer auth - apenas criador)
 PUT /api/games/1
 Authorization: Bearer <token>
 {
-  "homeTeamId": 1,
-  "awayTeamId": 2,
-  "gameDate": "2024-12-15T15:00:00",
-  "venue": "Vila Belmiro",
-  "championship": "Brasileirão Feminino",
-  "round": "Semifinal"
+  "gameName": "Nome Atualizado",
+  "gameDate": "2024-12-16T15:00:00",
+  "venue": "Novo Local",
+  "description": "Descrição atualizada"
 }
 
-# Deletar jogo (requer auth ORGANIZATION ou PLAYER)
+# Deletar jogo (requer auth - apenas criador)
 DELETE /api/games/1
 Authorization: Bearer <token>
 
-# Atualizar placar (requer auth ORGANIZATION ou PLAYER)
+# Atualizar placar (requer auth - apenas criador)
 PATCH /api/games/1/score?homeGoals=2&awayGoals=1
 Authorization: Bearer <token>
 
@@ -404,6 +474,283 @@ Authorization: Bearer <token>
 POST /api/games/1/subscribe
 Authorization: Bearer <token>
 ```
+
+#### 🤝 Sistema de Participações (Amistosos e Campeonatos)
+
+Para jogos **FRIENDLY** e **CHAMPIONSHIP**, jogadoras podem participar individualmente ou com seu time.
+
+##### 📍 Endpoints de Participação
+
+```http
+# Entrar em jogo (individual ou com time)
+POST /api/game-participants/join
+Authorization: Bearer <token>
+{
+  "gameId": 1,
+  "participationType": "INDIVIDUAL",  // ou "WITH_TEAM"
+  "teamSide": 1  // 1 ou 2
+}
+
+# Sair de jogo
+DELETE /api/game-participants/leave/1
+Authorization: Bearer <token>
+
+# Ver participantes de um jogo
+GET /api/game-participants/game/1?page=0&size=20
+
+# Ver minhas participações
+GET /api/game-participants/my-participations?page=0&size=10
+
+# Ver participações por jogadora
+GET /api/game-participants/player/123?page=0&size=10
+
+# Ver participações por time
+GET /api/game-participants/team/456?page=0&size=10
+```
+
+##### 🎯 Tipos de Participação
+
+| Tipo | Descrição |
+|------|-----------|
+| `INDIVIDUAL` | Jogadora participa sozinha |
+| `WITH_TEAM` | Jogadora participa com seu time |
+
+##### 🎯 Status de Participação
+
+| Status | Descrição |
+|--------|-----------|
+| `PENDING` | Participação pendente de confirmação |
+| `CONFIRMED` | Participação confirmada |
+| `CANCELLED` | Participação cancelada |
+
+#### 🏅 Sistema de Convites (Jogos de Copa)
+
+Para jogos **CUP**, organizações enviam convites formais para times específicos.
+
+##### 📍 Endpoints de Convites
+
+```http
+# Enviar convite para time (requer auth ORGANIZATION)
+POST /api/game-invites/send
+Authorization: Bearer <token>
+{
+  "gameId": 1,
+  "teamId": 456,
+  "teamPosition": "HOME",  // ou "AWAY"
+  "message": "Convite oficial para participar da final"
+}
+
+# Aceitar convite (requer auth ORGANIZATION do time)
+POST /api/game-invites/accept/10
+Authorization: Bearer <token>
+
+# Rejeitar convite (requer auth ORGANIZATION do time)
+POST /api/game-invites/reject/10
+Authorization: Bearer <token>
+
+# Cancelar convite (requer auth ORGANIZATION que enviou)
+DELETE /api/game-invites/cancel/10
+Authorization: Bearer <token>
+
+# Ver convites de um jogo
+GET /api/game-invites/game/1?page=0&size=20
+
+# Ver convites por organização
+GET /api/game-invites/organization/123?page=0&size=10
+
+# Ver convites por time
+GET /api/game-invites/team/456?page=0&size=10
+
+# Ver convites pendentes (organização atual)
+GET /api/game-invites/pending
+Authorization: Bearer <token>
+
+# Ver convites enviados (organização atual)
+GET /api/game-invites/sent?page=0&size=10
+Authorization: Bearer <token>
+```
+
+##### 🎯 Status de Convites
+
+| Status | Descrição |
+|--------|-----------|
+| `PENDING` | Convite enviado, aguardando resposta |
+| `ACCEPTED` | Convite aceito pelo time |
+| `REJECTED` | Convite rejeitado pelo time |
+| `CANCELLED` | Convite cancelado pela organização |
+| `EXPIRED` | Convite expirado |
+
+##### 🎯 Posições no Jogo
+
+| Posição | Descrição |
+|---------|-----------|
+| `HOME` | Time da casa |
+| `AWAY` | Time visitante |
+
+#### 🔒 Regras de Negócio e Validações
+
+##### 🎯 Permissões por Tipo de Usuário
+
+| Ação | PLAYER | ORGANIZATION |
+|------|--------|--------------|
+| Criar Amistoso | ✅ | ❌ |
+| Criar Campeonato | ✅ | ❌ |
+| Criar Copa | ❌ | ✅ |
+| Participar de Amistoso/Campeonato | ✅ | ❌ |
+| Enviar Convites para Copa | ❌ | ✅ |
+| Aceitar/Rejeitar Convites | ❌ | ✅ (apenas do próprio time) |
+
+##### 🎯 Validações de Participação
+
+- **Amistosos/Campeonatos**: Jogadoras podem participar individualmente ou com seu time
+- **Copa**: Apenas times podem participar através de convites formais
+- **Capacidade**: Máximo de jogadoras por lado (configurável)
+- **Conflitos**: Validação de horários conflitantes
+- **Status**: Apenas jogos com status `SCHEDULED` aceitam participações/convites
+
+##### 🎯 Lógica de Vencedores
+
+| Cenário | Retorno |
+|---------|---------|
+| Copa - Organizações diferentes | `winner` (Organization) |
+| Copa - Mesma organização | `winningTeamSide` (1 ou 2) |
+| Amistoso/Campeonato | `winningTeamSide` (1 ou 2) |
+| Empate ou não finalizado | `null` |
+
+#### 📋 Exemplos de Resposta
+
+##### 🎯 GameResponse (Amistoso)
+
+```json
+{
+  "id": 1,
+  "gameType": "FRIENDLY",
+  "gameName": "Pelada do Final de Semana",
+  "hostUsername": "maria_silva",
+  "hostId": 123,
+  "gameDate": "2024-12-15T15:00:00",
+  "venue": "Campo do Bairro",
+  "description": "Jogo descontraído entre amigas",
+  "status": "SCHEDULED",
+  "homeGoals": 0,
+  "awayGoals": 0,
+  "winner": null,
+  "winningTeamSide": null,
+  "createdAt": "2024-12-10T10:00:00",
+  "updatedAt": "2024-12-10T10:00:00",
+  "homeTeam": null,
+  "awayTeam": null,
+  "championship": null,
+  "round": null
+}
+```
+
+##### 🎯 GameResponse (Copa)
+
+```json
+{
+  "id": 2,
+  "gameType": "CUP",
+  "gameName": null,
+  "hostUsername": null,
+  "hostId": null,
+  "gameDate": "2024-12-25T14:00:00",
+  "venue": "Arena Principal",
+  "description": null,
+  "status": "FINISHED",
+  "homeGoals": 3,
+  "awayGoals": 1,
+  "winner": {
+    "id": 1,
+    "name": "Federação Paulista",
+    "description": "Organização oficial do futebol feminino"
+  },
+  "winningTeamSide": 1,
+  "createdAt": "2024-12-20T09:00:00",
+  "updatedAt": "2024-12-25T16:00:00",
+  "homeTeam": {
+    "id": 1,
+    "name": "Santos FC Feminino",
+    "city": "Santos"
+  },
+  "awayTeam": {
+    "id": 2,
+    "name": "Corinthians Feminino",
+    "city": "São Paulo"
+  },
+  "championship": "Copa Nacional Feminina",
+  "round": "Final"
+}
+```
+
+##### 🎯 GameParticipantResponse
+
+```json
+{
+  "id": 10,
+  "game": {
+    "id": 1,
+    "gameName": "Pelada do Final de Semana",
+    "gameType": "FRIENDLY"
+  },
+  "player": {
+    "id": 123,
+    "name": "Maria Silva",
+    "username": "maria_silva"
+  },
+  "team": {
+    "id": 456,
+    "name": "Time das Amigas",
+    "city": "São Paulo"
+  },
+  "teamSide": 1,
+  "status": "CONFIRMED",
+  "joinedAt": "2024-12-11T14:30:00"
+}
+```
+
+##### 🎯 GameInviteResponse
+
+```json
+{
+  "id": 20,
+  "game": {
+    "id": 2,
+    "championship": "Copa Nacional Feminina",
+    "gameType": "CUP"
+  },
+  "organization": {
+    "id": 1,
+    "name": "Federação Paulista",
+    "description": "Organização oficial"
+  },
+  "team": {
+    "id": 1,
+    "name": "Santos FC Feminino",
+    "city": "Santos"
+  },
+  "teamPosition": "HOME",
+  "message": "Convite oficial para participar da final",
+  "status": "ACCEPTED",
+  "sentAt": "2024-12-20T10:00:00",
+  "respondedAt": "2024-12-20T15:30:00"
+}
+```
+
+#### 🚨 Códigos de Erro Específicos
+
+| Código | Descrição |
+|--------|-----------|
+| `GAME_001` | Tipo de usuário não autorizado para esta ação |
+| `GAME_002` | Jogo não encontrado |
+| `GAME_003` | Participação já existe |
+| `GAME_004` | Convite já enviado |
+| `GAME_005` | Capacidade máxima atingida |
+| `GAME_006` | Conflito de horário |
+| `GAME_007` | Status do jogo não permite esta ação |
+| `GAME_008` | Convite expirado |
+| `GAME_009` | Apenas criador pode modificar o jogo |
+| `GAME_010` | Time já possui convite pendente |
 
 ### 📝 Posts (`/api/posts`)
 

@@ -1,8 +1,12 @@
 package com.fiap.projects.apipassabola.controller;
 
 import com.fiap.projects.apipassabola.dto.request.GameRequest;
+import com.fiap.projects.apipassabola.dto.request.FriendlyGameRequest;
+import com.fiap.projects.apipassabola.dto.request.ChampionshipGameRequest;
+import com.fiap.projects.apipassabola.dto.request.CupGameRequest;
 import com.fiap.projects.apipassabola.dto.response.GameResponse;
 import com.fiap.projects.apipassabola.entity.Game;
+import com.fiap.projects.apipassabola.entity.GameType;
 import com.fiap.projects.apipassabola.service.GameService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -70,10 +74,42 @@ public class GameController {
         return ResponseEntity.ok(games);
     }
     
-    @PostMapping
-    @PreAuthorize("hasRole('ORGANIZATION') or hasRole('PLAYER')")
-    public ResponseEntity<GameResponse> createGame(@Valid @RequestBody GameRequest request) {
-        GameResponse createdGame = gameService.create(request);
+    @GetMapping("/type/{gameType}")
+    public ResponseEntity<Page<GameResponse>> getGamesByType(
+            @PathVariable GameType gameType,
+            @PageableDefault(size = 20) Pageable pageable) {
+        Page<GameResponse> games = gameService.findByGameType(gameType, pageable);
+        return ResponseEntity.ok(games);
+    }
+    
+    @GetMapping("/host/{hostId}")
+    public ResponseEntity<Page<GameResponse>> getGamesByHost(
+            @PathVariable Long hostId,
+            @PageableDefault(size = 20) Pageable pageable) {
+        Page<GameResponse> games = gameService.findByHost(hostId, pageable);
+        return ResponseEntity.ok(games);
+    }
+    
+    // Specific endpoints for each game type
+    
+    @PostMapping("/friendly")
+    @PreAuthorize("hasRole('PLAYER')")
+    public ResponseEntity<GameResponse> createFriendlyGame(@Valid @RequestBody FriendlyGameRequest request) {
+        GameResponse createdGame = gameService.createFriendlyGame(request);
+        return ResponseEntity.ok(createdGame);
+    }
+    
+    @PostMapping("/championship")
+    @PreAuthorize("hasRole('PLAYER')")
+    public ResponseEntity<GameResponse> createChampionshipGame(@Valid @RequestBody ChampionshipGameRequest request) {
+        GameResponse createdGame = gameService.createChampionshipGame(request);
+        return ResponseEntity.ok(createdGame);
+    }
+    
+    @PostMapping("/cup")
+    @PreAuthorize("hasRole('ORGANIZATION')")
+    public ResponseEntity<GameResponse> createCupGame(@Valid @RequestBody CupGameRequest request) {
+        GameResponse createdGame = gameService.createCupGame(request);
         return ResponseEntity.ok(createdGame);
     }
     
