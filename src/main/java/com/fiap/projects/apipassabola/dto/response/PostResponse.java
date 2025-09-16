@@ -15,7 +15,7 @@ public class PostResponse {
     private Long id;
     private Long authorId;
     private String authorUsername;
-    private String authorRole;
+    private String authorName;
     private String content;
     private String imageUrl;
     private Post.PostType type;

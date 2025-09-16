@@ -124,9 +124,37 @@ public class UserContextService {
     
     /**
      * Gets the username of the currently authenticated user
-     * @return Current user's username
+     * Note: This returns email for Spring Security compatibility
+     * @return Current user's email (used as username for authentication)
      */
     public String getCurrentUsername() {
         return getCurrentUserDetails().getUsername();
+    }
+    
+    /**
+     * Gets the real username (not email) of the currently authenticated user
+     * @return Current user's actual username field
+     */
+    public String getCurrentRealUsername() {
+        UserIdAndType userInfo = getCurrentUserIdAndType();
+        Long userId = userInfo.getUserId();
+        UserType userType = userInfo.getUserType();
+        
+        switch (userType) {
+            case PLAYER:
+                return playerRepository.findById(userId)
+                        .map(Player::getRealUsername)
+                        .orElse("Unknown Player");
+            case ORGANIZATION:
+                return organizationRepository.findById(userId)
+                        .map(Organization::getRealUsername)
+                        .orElse("Unknown Organization");
+            case SPECTATOR:
+                return spectatorRepository.findById(userId)
+                        .map(Spectator::getRealUsername)
+                        .orElse("Unknown Spectator");
+            default:
+                return "Unknown User";
+        }
     }
 }

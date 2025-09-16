@@ -24,6 +24,9 @@ public class Post {
     @Column(name = "author_username", nullable = false)
     private String authorUsername;
     
+    @Column(name = "author_name", nullable = false)
+    private String authorName;
+    
     @Enumerated(EnumType.STRING)
     @Column(name = "author_type", nullable = false)
     private UserType authorType;
