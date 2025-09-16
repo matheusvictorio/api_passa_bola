@@ -12,6 +12,11 @@ public class PlayerSummaryResponse {
     private Long id;
     private String username;
     private String name;
+    private String email;
+    private String bio;
     private String profilePhotoUrl;
+    private int followersCount;
+    private int followingCount;
+    private Integer gamesPlayed;
     private OrganizationSummaryResponse organization;
 }

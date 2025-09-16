@@ -74,8 +74,8 @@ public class Organization implements UserDetails {
     @ManyToMany(mappedBy = "followers")
     private Set<Organization> following = new HashSet<>();
     
-    @ManyToMany(mappedBy = "teams")
-    private Set<Player> teams = new HashSet<>();
+    @ManyToMany(mappedBy = "favoriteOrganizations")
+    private Set<Player> favoritedByPlayers = new HashSet<>();
     
     // Games where this organization is either home or away team
     // Note: This is a derived relationship, not stored directly

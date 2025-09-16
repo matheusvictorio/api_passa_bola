@@ -90,6 +90,12 @@ public class PlayerService {
         playerRepository.deleteById(id);
     }
     
+    public PlayerResponse followByEmail(String followerEmail, Long followedId) {
+        Player follower = playerRepository.findByEmail(followerEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Player", "email", followerEmail));
+        return follow(follower.getId(), followedId);
+    }
+    
     public PlayerResponse follow(Long followerId, Long followedId) {
         if (followerId.equals(followedId)) {
             throw new BusinessException("Player cannot follow themselves");
@@ -111,6 +117,12 @@ public class PlayerService {
         playerRepository.save(follower);
         
         return convertToResponse(followed);
+    }
+    
+    public PlayerResponse unfollowByEmail(String followerEmail, Long followedId) {
+        Player follower = playerRepository.findByEmail(followerEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Player", "email", followerEmail));
+        return unfollow(follower.getId(), followedId);
     }
     
     public PlayerResponse unfollow(Long followerId, Long followedId) {

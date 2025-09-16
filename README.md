@@ -474,6 +474,98 @@ POST /api/posts/1/share
 Authorization: Bearer <token>
 ```
 
+### 🏆 Sistema de Times (`/api/teams`)
+
+O sistema de times permite que **jogadoras (PLAYER)** criem e participem de **múltiplos times**, enviando convites apenas para jogadoras que seguem mutuamente.
+
+#### 🔑 Características Principais
+- ✅ **Múltiplos Times**: Jogadoras podem participar de vários times simultaneamente
+- ✅ **Seguimento Mútuo**: Convites só podem ser enviados entre jogadoras que se seguem mutuamente
+- ✅ **Sistema de Convites**: Convites com status (PENDING, ACCEPTED, REJECTED, CANCELLED)
+- ✅ **Liderança**: Criadora do time torna-se líder automaticamente
+- ✅ **Gerenciamento**: Líderes podem convidar, remover jogadoras e cancelar convites
+
+#### 📍 Endpoints de Times
+
+```http
+# Criar time (requer auth PLAYER)
+POST /api/teams
+Authorization: Bearer <token>
+{
+  "nameTeam": "Meu Time Incrível"
+}
+
+# Listar todos os times (público)
+GET /api/teams?page=0&size=10&sortBy=createdAt&sortDir=desc
+
+# Buscar time por ID (público)
+GET /api/teams/1
+
+# Buscar times por nome (público)
+GET /api/teams/search?name=Incrível&page=0&size=10
+
+# Enviar convite para jogadora (requer auth PLAYER - apenas líderes)
+POST /api/teams/1/invites
+Authorization: Bearer <token>
+{
+  "invitedPlayerId": 456
+}
+
+# Ver convites do time (requer auth PLAYER - apenas líder)
+GET /api/teams/1/invites
+Authorization: Bearer <token>
+
+# Ver meus convites pendentes (requer auth PLAYER)
+GET /api/teams/my-invites
+Authorization: Bearer <token>
+
+# Aceitar convite (requer auth PLAYER)
+POST /api/teams/invites/10/accept
+Authorization: Bearer <token>
+
+# Rejeitar convite (requer auth PLAYER)
+POST /api/teams/invites/10/reject
+Authorization: Bearer <token>
+
+# Cancelar convite (requer auth PLAYER - apenas líder)
+DELETE /api/teams/invites/10
+Authorization: Bearer <token>
+
+# Sair do time (requer auth PLAYER - exceto líder)
+POST /api/teams/1/leave
+Authorization: Bearer <token>
+
+# Remover jogadora do time (requer auth PLAYER - apenas líder)
+DELETE /api/teams/1/players/456
+Authorization: Bearer <token>
+```
+
+#### 🎯 Status de Convites
+
+| Status | Descrição |
+|--------|-----------|
+| `PENDING` | Convite enviado, aguardando resposta |
+| `ACCEPTED` | Convite aceito, jogadora adicionada ao time |
+| `REJECTED` | Convite rejeitado pela jogadora |
+| `CANCELLED` | Convite cancelado pelo líder |
+
+#### 🔒 Regras de Negócio - Times
+
+**✅ Permitido:**
+- Jogadoras podem participar de **múltiplos times**
+- Convidar apenas jogadoras que seguem mutuamente
+- Aceitar/rejeitar convites enviados para você
+- Sair de times (exceto se for líder)
+- Líderes podem remover jogadoras e cancelar convites
+
+**❌ Não Permitido:**
+- Organizações ou espectadores criarem times
+- Convidar jogadoras que não seguem mutuamente
+- Convidar jogadoras já presentes no time
+- Líderes saírem do time sem transferir liderança
+- Aceitar convites de outros jogadores
+- Remover jogadoras sem ser líder
+
 ## 💡 Exemplos Práticos
 
 ### Exemplo 1: Fluxo Completo de Jogadora
@@ -515,7 +607,23 @@ curl -X POST http://localhost:8080/api/posts \
 curl -X POST http://localhost:8080/api/players/2/follow \
   -H "Authorization: Bearer SEU_TOKEN_AQUI"
 
-# 5. Criar jogo (jogadoras também podem criar jogos)
+# 5. Criar um time
+curl -X POST http://localhost:8080/api/teams \
+  -H "Authorization: Bearer SEU_TOKEN_AQUI" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nameTeam": "Estrelas do Futebol"
+  }'
+
+# 6. Enviar convite para jogadora (ID 2 que foi seguida)
+curl -X POST http://localhost:8080/api/teams/1/invites \
+  -H "Authorization: Bearer SEU_TOKEN_AQUI" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "invitedPlayerId": 2
+  }'
+
+# 7. Criar jogo (jogadoras também podem criar jogos)
 curl -X POST http://localhost:8080/api/games \
   -H "Authorization: Bearer SEU_TOKEN_AQUI" \
   -H "Content-Type: application/json" \
@@ -529,7 +637,56 @@ curl -X POST http://localhost:8080/api/games \
   }'
 ```
 
-### Exemplo 2: Fluxo de Organização
+### Exemplo 2: Fluxo Completo do Sistema de Times
+
+```bash
+# Cenário: Maria cria um time e convida Ana
+
+# 1. Maria faz login
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "maria@email.com",
+    "password": "senha123"
+  }'
+
+# 2. Maria cria um time (torna-se líder automaticamente)
+curl -X POST http://localhost:8080/api/teams \
+  -H "Authorization: Bearer MARIA_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nameTeam": "Estrelas do Futebol"
+  }'
+
+# 3. Maria segue Ana (necessário para seguimento mútuo)
+curl -X POST http://localhost:8080/api/players/2/follow \
+  -H "Authorization: Bearer MARIA_TOKEN"
+
+# 4. Ana segue Maria de volta (seguimento mútuo estabelecido)
+curl -X POST http://localhost:8080/api/players/1/follow \
+  -H "Authorization: Bearer ANA_TOKEN"
+
+# 5. Maria envia convite para Ana
+curl -X POST http://localhost:8080/api/teams/1/invites \
+  -H "Authorization: Bearer MARIA_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "invitedPlayerId": 2
+  }'
+
+# 6. Ana verifica seus convites pendentes
+curl -X GET http://localhost:8080/api/teams/my-invites \
+  -H "Authorization: Bearer ANA_TOKEN"
+
+# 7. Ana aceita o convite (é adicionada automaticamente ao time)
+curl -X POST http://localhost:8080/api/teams/invites/1/accept \
+  -H "Authorization: Bearer ANA_TOKEN"
+
+# 8. Verificar time atualizado com ambas jogadoras
+curl -X GET http://localhost:8080/api/teams/1
+```
+
+### Exemplo 3: Fluxo de Organização
 
 ```bash
 # 1. Registrar organização
@@ -576,7 +733,7 @@ curl -X POST http://localhost:8080/api/posts \
   }'
 ```
 
-### Exemplo 3: Fluxo de Espectador
+### Exemplo 4: Fluxo de Espectador
 
 ```bash
 # 1. Registrar espectador

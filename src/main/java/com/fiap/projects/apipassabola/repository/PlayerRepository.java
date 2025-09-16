@@ -1,6 +1,7 @@
 package com.fiap.projects.apipassabola.repository;
 
 import com.fiap.projects.apipassabola.entity.Player;
+import com.fiap.projects.apipassabola.entity.Team;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -39,4 +40,14 @@ public interface PlayerRepository extends JpaRepository<Player, Long> {
     
     @Query("SELECT COUNT(p) FROM Player p WHERE p.organization.id = :organizationId")
     Long countByOrganizationId(@Param("organizationId") Long organizationId);
+    
+    // Team-related queries for ManyToMany relationship
+    @Query("SELECT p FROM Player p JOIN p.teams t WHERE t.id = :teamId")
+    List<Player> findByTeamId(@Param("teamId") Long teamId);
+    
+    @Query("SELECT COUNT(p) FROM Player p JOIN p.teams t WHERE t.id = :teamId")
+    long countByTeamId(@Param("teamId") Long teamId);
+    
+    @Query("SELECT p FROM Player p JOIN p.teams t WHERE t = :team")
+    List<Player> findByTeamsContaining(@Param("team") Team team);
 }

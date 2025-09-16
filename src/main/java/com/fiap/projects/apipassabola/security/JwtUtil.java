@@ -2,7 +2,6 @@ package com.fiap.projects.apipassabola.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
@@ -14,7 +13,6 @@ import java.util.Map;
 import java.util.function.Function;
 
 @Component
-@Slf4j
 public class JwtUtil {
     
     @Value("${jwt.secret:mySecretKey}")
@@ -31,8 +29,7 @@ public class JwtUtil {
         try {
             return extractClaim(token, Claims::getSubject);
         } catch (JwtException e) {
-            log.warn("Failed to extract username from JWT token: {}", e.getMessage());
-            throw e;
+            return null;
         }
     }
     
@@ -40,8 +37,7 @@ public class JwtUtil {
         try {
             return extractClaim(token, Claims::getExpiration);
         } catch (JwtException e) {
-            log.warn("Failed to extract expiration from JWT token: {}", e.getMessage());
-            throw e;
+            return null;
         }
     }
     
@@ -57,20 +53,7 @@ public class JwtUtil {
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
-        } catch (MalformedJwtException e) {
-            log.error("Malformed JWT token: {}", e.getMessage());
-            throw e;
-        } catch (ExpiredJwtException e) {
-            log.warn("JWT token has expired: {}", e.getMessage());
-            throw e;
-        } catch (UnsupportedJwtException e) {
-            log.error("Unsupported JWT token: {}", e.getMessage());
-            throw e;
-        } catch (IllegalArgumentException e) {
-            log.error("JWT token compact of handler are invalid: {}", e.getMessage());
-            throw e;
         } catch (JwtException e) {
-            log.error("JWT token validation failed: {}", e.getMessage());
             throw e;
         }
     }
@@ -79,7 +62,6 @@ public class JwtUtil {
         try {
             return extractExpiration(token).before(new Date());
         } catch (JwtException e) {
-            log.warn("Failed to check token expiration: {}", e.getMessage());
             return true; // Consider expired if we can't parse it
         }
     }
@@ -109,7 +91,6 @@ public class JwtUtil {
             final String username = extractUsername(token);
             return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
         } catch (JwtException e) {
-            log.warn("Token validation failed: {}", e.getMessage());
             return false;
         }
     }
@@ -126,7 +107,6 @@ public class JwtUtil {
                 .parseSignedClaims(token);
             return true;
         } catch (JwtException | IllegalArgumentException e) {
-            log.debug("Token validation failed: {}", e.getMessage());
             return false;
         }
     }
@@ -140,7 +120,6 @@ public class JwtUtil {
         try {
             return extractUsername(token);
         } catch (JwtException | IllegalArgumentException e) {
-            log.debug("Failed to safely extract username: {}", e.getMessage());
             return null;
         }
     }
