@@ -61,6 +61,7 @@ public class Spectator implements UserDetails {
     private Organization favoriteTeam;
     
     
+    // Spectator-to-Spectator following
     @ManyToMany
     @JoinTable(
         name = "spectator_followers",
@@ -71,6 +72,32 @@ public class Spectator implements UserDetails {
     
     @ManyToMany(mappedBy = "followers")
     private Set<Spectator> following = new HashSet<>();
+    
+    // Cross-type following: Spectator following Players
+    @ManyToMany
+    @JoinTable(
+        name = "spectator_following_players",
+        joinColumns = @JoinColumn(name = "spectator_id"),
+        inverseJoinColumns = @JoinColumn(name = "player_id")
+    )
+    private Set<Player> followingPlayers = new HashSet<>();
+    
+    // Cross-type following: Spectator following Organizations
+    @ManyToMany
+    @JoinTable(
+        name = "spectator_following_organizations",
+        joinColumns = @JoinColumn(name = "spectator_id"),
+        inverseJoinColumns = @JoinColumn(name = "organization_id")
+    )
+    private Set<Organization> followingOrganizations = new HashSet<>();
+    
+    // Cross-type followers: Players following this Spectator
+    @ManyToMany(mappedBy = "followingSpectators")
+    private Set<Player> playerFollowers = new HashSet<>();
+    
+    // Cross-type followers: Organizations following this Spectator
+    @ManyToMany(mappedBy = "followingSpectators")
+    private Set<Organization> organizationFollowers = new HashSet<>();
     
     @ManyToMany
     @JoinTable(

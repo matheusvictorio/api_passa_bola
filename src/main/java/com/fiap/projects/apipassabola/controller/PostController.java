@@ -2,8 +2,10 @@ package com.fiap.projects.apipassabola.controller;
 
 import com.fiap.projects.apipassabola.dto.request.PostRequest;
 import com.fiap.projects.apipassabola.dto.response.PostResponse;
+import com.fiap.projects.apipassabola.dto.response.PostLikeResponse;
 import com.fiap.projects.apipassabola.entity.Post;
 import com.fiap.projects.apipassabola.service.PostService;
+import com.fiap.projects.apipassabola.service.PostLikeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -13,6 +15,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/posts")
 @RequiredArgsConstructor
@@ -20,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 public class PostController {
     
     private final PostService postService;
+    private final PostLikeService postLikeService;
     
     @GetMapping
     public ResponseEntity<Page<PostResponse>> getAllPosts(
@@ -120,17 +126,36 @@ public class PostController {
     }
     
     @PostMapping("/{id}/like")
-    @PreAuthorize("hasRole('PLAYER') or hasRole('SPECTATOR') or hasRole('ORGANIZATION')")
-    public ResponseEntity<PostResponse> likePost(@PathVariable Long id) {
-        PostResponse likedPost = postService.likePost(id);
-        return ResponseEntity.ok(likedPost);
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<PostLikeResponse> likePost(@PathVariable Long id) {
+        PostLikeResponse likeResponse = postLikeService.likePost(id);
+        return ResponseEntity.ok(likeResponse);
     }
     
     @DeleteMapping("/{id}/like")
-    @PreAuthorize("hasRole('PLAYER') or hasRole('SPECTATOR') or hasRole('ORGANIZATION')")
-    public ResponseEntity<PostResponse> unlikePost(@PathVariable Long id) {
-        PostResponse unlikedPost = postService.unlikePost(id);
-        return ResponseEntity.ok(unlikedPost);
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> unlikePost(@PathVariable Long id) {
+        postLikeService.unlikePost(id);
+        return ResponseEntity.noContent().build();
+    }
+    
+    @GetMapping("/{id}/liked")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Map<String, Boolean>> hasLikedPost(@PathVariable Long id) {
+        boolean hasLiked = postLikeService.hasUserLikedPost(id);
+        return ResponseEntity.ok(Map.of("hasLiked", hasLiked));
+    }
+    
+    @GetMapping("/{id}/likes")
+    public ResponseEntity<List<PostLikeResponse>> getPostLikes(@PathVariable Long id) {
+        List<PostLikeResponse> likes = postLikeService.getPostLikes(id);
+        return ResponseEntity.ok(likes);
+    }
+    
+    @GetMapping("/{id}/likes/count")
+    public ResponseEntity<Map<String, Long>> getPostLikesCount(@PathVariable Long id) {
+        long count = postLikeService.getPostLikesCount(id);
+        return ResponseEntity.ok(Map.of("totalLikes", count));
     }
     
     @PostMapping("/{id}/comment")

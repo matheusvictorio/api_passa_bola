@@ -1,16 +1,20 @@
 package com.fiap.projects.apipassabola.service;
 
 import com.fiap.projects.apipassabola.dto.request.PlayerRequest;
+import com.fiap.projects.apipassabola.dto.response.OrganizationResponse;
 import com.fiap.projects.apipassabola.dto.response.OrganizationSummaryResponse;
 import com.fiap.projects.apipassabola.dto.response.PlayerResponse;
 import com.fiap.projects.apipassabola.dto.response.PlayerSummaryResponse;
+import com.fiap.projects.apipassabola.dto.response.SpectatorResponse;
 import com.fiap.projects.apipassabola.entity.Organization;
 import com.fiap.projects.apipassabola.entity.Player;
+import com.fiap.projects.apipassabola.entity.Spectator;
 import com.fiap.projects.apipassabola.exception.BusinessException;
 import com.fiap.projects.apipassabola.exception.ResourceNotFoundException;
 import com.fiap.projects.apipassabola.repository.OrganizationRepository;
 import com.fiap.projects.apipassabola.repository.PlayerRepository;
 import com.fiap.projects.apipassabola.repository.PostRepository;
+import com.fiap.projects.apipassabola.repository.SpectatorRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -27,6 +31,7 @@ public class PlayerService {
     private final PlayerRepository playerRepository;
     private final OrganizationRepository organizationRepository;
     private final PostRepository postRepository;
+    private final SpectatorRepository spectatorRepository;
     
     public Page<PlayerResponse> findAll(Pageable pageable) {
         return playerRepository.findAll(pageable).map(this::convertToResponse);
@@ -197,6 +202,157 @@ public class PlayerService {
             response.setOrganization(orgResponse);
         }
         
+        return response;
+    }
+    
+    // ========== CROSS-TYPE FOLLOWING METHODS FOR PLAYER ==========
+    
+    // Player following Spectators
+    public void followSpectator(Long playerId, Long spectatorId) {
+        Player player = playerRepository.findById(playerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Player", "id", playerId));
+        
+        Spectator spectator = spectatorRepository.findById(spectatorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Spectator", "id", spectatorId));
+        
+        if (playerRepository.isFollowingSpectator(playerId, spectatorId)) {
+            throw new BusinessException("Player is already following this spectator");
+        }
+        
+        player.getFollowingSpectators().add(spectator);
+        spectator.getPlayerFollowers().add(player);
+        
+        playerRepository.save(player);
+        spectatorRepository.save(spectator);
+    }
+    
+    public void unfollowSpectator(Long playerId, Long spectatorId) {
+        Player player = playerRepository.findById(playerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Player", "id", playerId));
+        
+        Spectator spectator = spectatorRepository.findById(spectatorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Spectator", "id", spectatorId));
+        
+        if (!playerRepository.isFollowingSpectator(playerId, spectatorId)) {
+            throw new BusinessException("Player is not following this spectator");
+        }
+        
+        player.getFollowingSpectators().remove(spectator);
+        spectator.getPlayerFollowers().remove(player);
+        
+        playerRepository.save(player);
+        spectatorRepository.save(spectator);
+    }
+    
+    // Player following Organizations
+    public void followOrganization(Long playerId, Long organizationId) {
+        Player player = playerRepository.findById(playerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Player", "id", playerId));
+        
+        Organization organization = organizationRepository.findById(organizationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Organization", "id", organizationId));
+        
+        if (playerRepository.isFollowingOrganization(playerId, organizationId)) {
+            throw new BusinessException("Player is already following this organization");
+        }
+        
+        player.getFollowingOrganizations().add(organization);
+        organization.getPlayerFollowers().add(player);
+        
+        playerRepository.save(player);
+        organizationRepository.save(organization);
+    }
+    
+    public void unfollowOrganization(Long playerId, Long organizationId) {
+        Player player = playerRepository.findById(playerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Player", "id", playerId));
+        
+        Organization organization = organizationRepository.findById(organizationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Organization", "id", organizationId));
+        
+        if (!playerRepository.isFollowingOrganization(playerId, organizationId)) {
+            throw new BusinessException("Player is not following this organization");
+        }
+        
+        player.getFollowingOrganizations().remove(organization);
+        organization.getPlayerFollowers().remove(player);
+        
+        playerRepository.save(player);
+        organizationRepository.save(organization);
+    }
+    
+    // Get following lists for Player
+    public Page<SpectatorResponse> getFollowingSpectators(Long playerId, Pageable pageable) {
+        if (!playerRepository.existsById(playerId)) {
+            throw new ResourceNotFoundException("Player", "id", playerId);
+        }
+        
+        return playerRepository.findFollowingSpectatorsByPlayerId(playerId, pageable)
+                .map(this::convertSpectatorToResponse);
+    }
+    
+    public Page<OrganizationResponse> getFollowingOrganizations(Long playerId, Pageable pageable) {
+        if (!playerRepository.existsById(playerId)) {
+            throw new ResourceNotFoundException("Player", "id", playerId);
+        }
+        
+        return playerRepository.findFollowingOrganizationsByPlayerId(playerId, pageable)
+                .map(this::convertOrganizationToResponse);
+    }
+    
+    // Check following status for Player
+    public boolean isFollowingSpectator(Long playerId, Long spectatorId) {
+        return playerRepository.isFollowingSpectator(playerId, spectatorId);
+    }
+    
+    public boolean isFollowingOrganization(Long playerId, Long organizationId) {
+        return playerRepository.isFollowingOrganization(playerId, organizationId);
+    }
+    
+    // Get followers lists for Player (cross-type)
+    public Page<SpectatorResponse> getSpectatorFollowers(Long playerId, Pageable pageable) {
+        if (!playerRepository.existsById(playerId)) {
+            throw new ResourceNotFoundException("Player", "id", playerId);
+        }
+        
+        return playerRepository.findSpectatorFollowersByPlayerId(playerId, pageable)
+                .map(this::convertSpectatorToResponse);
+    }
+    
+    public Page<OrganizationResponse> getOrganizationFollowers(Long playerId, Pageable pageable) {
+        if (!playerRepository.existsById(playerId)) {
+            throw new ResourceNotFoundException("Player", "id", playerId);
+        }
+        
+        return playerRepository.findOrganizationFollowersByPlayerId(playerId, pageable)
+                .map(this::convertOrganizationToResponse);
+    }
+    
+    // Conversion methods for cross-type responses
+    private SpectatorResponse convertSpectatorToResponse(Spectator spectator) {
+        SpectatorResponse response = new SpectatorResponse();
+        response.setId(spectator.getId());
+        response.setUsername(spectator.getRealUsername());
+        response.setName(spectator.getName());
+        response.setEmail(spectator.getEmail());
+        response.setProfilePhotoUrl(spectator.getProfilePhotoUrl());
+        response.setBio(spectator.getBio());
+        response.setCreatedAt(spectator.getCreatedAt());
+        response.setUpdatedAt(spectator.getUpdatedAt());
+        return response;
+    }
+    
+    private OrganizationResponse convertOrganizationToResponse(Organization organization) {
+        OrganizationResponse response = new OrganizationResponse();
+        response.setId(organization.getId());
+        response.setUsername(organization.getRealUsername());
+        response.setName(organization.getName());
+        response.setEmail(organization.getEmail());
+        response.setCnpj(organization.getCnpj());
+        // Note: Description field might not exist in Organization entity, removing this line
+        response.setProfilePhotoUrl(organization.getProfilePhotoUrl());
+        response.setCreatedAt(organization.getCreatedAt());
+        response.setUpdatedAt(organization.getUpdatedAt());
         return response;
     }
 }

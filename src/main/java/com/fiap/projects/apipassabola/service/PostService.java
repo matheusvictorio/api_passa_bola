@@ -2,6 +2,7 @@ package com.fiap.projects.apipassabola.service;
 
 import com.fiap.projects.apipassabola.dto.request.PostRequest;
 import com.fiap.projects.apipassabola.dto.response.PostResponse;
+import com.fiap.projects.apipassabola.dto.response.PostLikeResponse;
 import com.fiap.projects.apipassabola.entity.*;
 import com.fiap.projects.apipassabola.exception.BusinessException;
 import com.fiap.projects.apipassabola.exception.ResourceNotFoundException;
@@ -12,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -24,6 +26,7 @@ public class PostService {
     private final OrganizationRepository organizationRepository;
     private final SpectatorRepository spectatorRepository;
     private final UserContextService userContextService;
+    private final PostLikeService postLikeService;
     
     public Page<PostResponse> findAll(Pageable pageable) {
         return postRepository.findAll(pageable).map(this::convertToResponse);
@@ -79,7 +82,8 @@ public class PostService {
     public PostResponse create(PostRequest request) {
         Long currentUserId = userContextService.getCurrentUserId();
         UserType currentUserType = userContextService.getCurrentUserType();
-        String currentUsername = userContextService.getCurrentUsername();
+        String currentRealUsername = userContextService.getCurrentRealUsername();
+        String currentUserName = getCurrentUserName(currentUserId, currentUserType);
         
         // Auto-detect player if the current user is a PLAYER and no specific playerId is provided
         if (request.getPlayerId() != null) {
@@ -90,7 +94,8 @@ public class PostService {
         
         Post post = new Post();
         post.setAuthorId(currentUserId);
-        post.setAuthorUsername(currentUsername);
+        post.setAuthorUsername(currentRealUsername);
+        post.setAuthorName(currentUserName);
         post.setAuthorType(currentUserType);
         post.setContent(request.getContent());
         post.setImageUrl(request.getImageUrl());
@@ -137,7 +142,10 @@ public class PostService {
         postRepository.deleteById(id);
     }
     
+    @Deprecated
     public PostResponse likePost(Long id) {
+        // Deprecated - use PostLikeService.likePost() instead
+        // This method is kept for backward compatibility
         Post post = postRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Post", "id", id));
         
@@ -146,7 +154,10 @@ public class PostService {
         return convertToResponse(savedPost);
     }
     
+    @Deprecated
     public PostResponse unlikePost(Long id) {
+        // Deprecated - use PostLikeService.unlikePost() instead
+        // This method is kept for backward compatibility
         Post post = postRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Post", "id", id));
         
@@ -181,8 +192,19 @@ public class PostService {
         PostResponse response = new PostResponse();
         response.setId(post.getId());
         response.setAuthorId(post.getAuthorId());
-        response.setAuthorUsername(post.getAuthorUsername());
-        response.setAuthorRole(post.getAuthorType().name());
+        
+        // Get real username (not email) for the response
+        String realUsername = getRealUsername(post.getAuthorId(), post.getAuthorType(), post.getAuthorUsername());
+        response.setAuthorUsername(realUsername);
+        
+        // Use stored authorName if available, otherwise fetch from database
+        String authorName = post.getAuthorName();
+        if (authorName == null || authorName.trim().isEmpty()) {
+            authorName = getCurrentUserName(post.getAuthorId(), post.getAuthorType());
+        }
+        response.setAuthorName(authorName);
+        response.setAuthorType(post.getAuthorType());
+        
         response.setContent(post.getContent());
         response.setImageUrl(post.getImageUrl());
         response.setType(post.getType());
@@ -192,6 +214,82 @@ public class PostService {
         response.setCreatedAt(post.getCreatedAt());
         response.setUpdatedAt(post.getUpdatedAt());
         
+        // Add like information for frontend
+        try {
+            // Check if current user has liked this post
+            response.setIsLikedByCurrentUser(postLikeService.hasUserLikedPost(post.getId()));
+            
+            // Get recent likes (last 3 for UI display)
+            List<PostLikeResponse> recentLikes = postLikeService.getRecentPostLikes(post.getId(), 3);
+            response.setRecentLikes(recentLikes);
+            
+            // Get total likes count from PostLike table (more accurate than post.likes)
+            Long totalLikes = postLikeService.getPostLikesCount(post.getId());
+            response.setTotalLikes(totalLikes);
+            
+        } catch (Exception e) {
+            // User not authenticated or other error - set default values
+            response.setIsLikedByCurrentUser(false);
+            response.setRecentLikes(List.of());
+            response.setTotalLikes((long) post.getLikes());
+        }
+        
         return response;
+    }
+    
+    /**
+     * Gets the real username (not email) of a user based on their ID and type
+     * @param userId The user ID
+     * @param userType The user type (PLAYER, ORGANIZATION, SPECTATOR)
+     * @param storedUsername The username stored in the post (might be email for old posts)
+     * @return The user's real username
+     */
+    private String getRealUsername(Long userId, UserType userType, String storedUsername) {
+        // If stored username looks like email, fetch real username from database
+        if (storedUsername != null && storedUsername.contains("@")) {
+            switch (userType) {
+                case PLAYER:
+                    return playerRepository.findById(userId)
+                            .map(Player::getRealUsername)
+                            .orElse(storedUsername);
+                case ORGANIZATION:
+                    return organizationRepository.findById(userId)
+                            .map(Organization::getRealUsername)
+                            .orElse(storedUsername);
+                case SPECTATOR:
+                    return spectatorRepository.findById(userId)
+                            .map(Spectator::getRealUsername)
+                            .orElse(storedUsername);
+                default:
+                    return storedUsername;
+            }
+        }
+        // If stored username doesn't look like email, return it as is
+        return storedUsername;
+    }
+    
+    /**
+     * Gets the real name of a user based on their ID and type
+     * @param userId The user ID
+     * @param userType The user type (PLAYER, ORGANIZATION, SPECTATOR)
+     * @return The user's real name
+     */
+    private String getCurrentUserName(Long userId, UserType userType) {
+        switch (userType) {
+            case PLAYER:
+                return playerRepository.findById(userId)
+                        .map(Player::getName)
+                        .orElse("Unknown Player");
+            case ORGANIZATION:
+                return organizationRepository.findById(userId)
+                        .map(Organization::getName)
+                        .orElse("Unknown Organization");
+            case SPECTATOR:
+                return spectatorRepository.findById(userId)
+                        .map(Spectator::getName)
+                        .orElse("Unknown Spectator");
+            default:
+                return "Unknown User";
+        }
     }
 }

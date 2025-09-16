@@ -76,7 +76,6 @@ export JWT_SECRET=minha_chave_secreta_super_segura
   "bio": "Atacante profissional",
   "followers": 150,
   "following": 75,
-  "gamesPlayed": 45,
   "birthDate": "1995-03-15",
   "profilePhotoUrl": "https://example.com/photo.jpg",
   "bannerUrl": "https://example.com/banner.jpg",
@@ -99,7 +98,6 @@ export JWT_SECRET=minha_chave_secreta_super_segura
   "bio": "Time tradicional de futebol feminino",
   "followers": 5000,
   "following": 200,
-  "gamesPlayed": 120,
   "profilePhotoUrl": "https://example.com/logo.jpg",
   "bannerUrl": "https://example.com/banner.jpg",
   "phone": "(13) 3333-3333"
@@ -132,15 +130,22 @@ export JWT_SECRET=minha_chave_secreta_super_segura
 ```json
 {
   "id": 1,
-  "homeTeam": { "id": 1, "name": "Santos FC" },
-  "awayTeam": { "id": 2, "name": "Corinthians" },
+  "gameType": "FRIENDLY",
+  "gameName": "Pelada do Final de Semana",
+  "hostUsername": "maria_silva",
+  "hostId": 123,
   "gameDate": "2024-12-15T15:00:00",
-  "venue": "Vila Belmiro",
-  "championship": "Brasileirão Feminino",
-  "round": "Semifinal",
+  "venue": "Campo do Bairro",
+  "description": "Jogo descontraído entre amigas",
   "status": "SCHEDULED",
   "homeGoals": 0,
-  "awayGoals": 0
+  "awayGoals": 0,
+  "homeTeam": null,
+  "awayTeam": null,
+  "championship": null,
+  "round": null,
+  "createdAt": "2024-12-10T10:00:00",
+  "updatedAt": "2024-12-10T10:00:00"
 }
 ```
 
@@ -151,7 +156,7 @@ export JWT_SECRET=minha_chave_secreta_super_segura
   "authorId": 1,
   "authorUsername": "maria_silva",
   "authorRole": "PLAYER",
-  "content": "Preparando para o próximo jogo! 💪⚽",
+  "content": "Preparando para o próximo treino! 💪⚽",
   "imageUrl": "https://example.com/treino.jpg",
   "type": "GENERAL",
   "likes": 45,
@@ -288,19 +293,14 @@ Authorization: Bearer <token>
   "organizationId": 1
 }
 
-# Seguir jogadora (requer auth)
-POST /api/players/1/follow
+# Atualizar foto de perfil (requer auth PLAYER)
+PUT /api/players/1/profile-photo
 Authorization: Bearer <token>
+Content-Type: multipart/form-data
 
-# Parar de seguir
-DELETE /api/players/1/follow
+# Deletar (requer auth PLAYER)
+DELETE /api/players/1
 Authorization: Bearer <token>
-
-# Listar seguidores
-GET /api/players/1/followers?page=0&size=20
-
-# Listar seguindo
-GET /api/players/1/following?page=0&size=20
 ```
 
 ### 🏟️ Organizações (`/api/organizations`)
@@ -323,8 +323,13 @@ Authorization: Bearer <token>
   "bio": "Tradicional time de futebol feminino"
 }
 
-# Seguir organização (requer auth)
-POST /api/organizations/1/follow
+# Atualizar foto de perfil (requer auth ORGANIZATION)
+PUT /api/organizations/1/profile-photo
+Authorization: Bearer <token>
+Content-Type: multipart/form-data
+
+# Deletar (requer auth ORGANIZATION)
+DELETE /api/organizations/1
 Authorization: Bearer <token>
 ```
 
@@ -337,6 +342,12 @@ GET /api/spectators?page=0&size=20
 # Buscar por ID
 GET /api/spectators/1
 
+# Buscar por username
+GET /api/spectators/username/joao_torcedor
+
+# Buscar por nome
+GET /api/spectators/search?name=João&page=0&size=20
+
 # Buscar por time favorito
 GET /api/spectators/favorite-team/1?page=0&size=10
 
@@ -348,11 +359,181 @@ Authorization: Bearer <token>
   "bio": "Torcedor apaixonado",
   "favoriteTeamId": 2
 }
+
+# Deletar (requer auth SPECTATOR)
+DELETE /api/spectators/1
+Authorization: Bearer <token>
 ```
+
+#### 👥 Sistema Universal de Seguimento
+
+O sistema de seguimento foi **completamente expandido** para permitir que **todos os tipos de usuários possam seguir todos os outros tipos**:
+
+- ✅ **Spectators** podem seguir **Players**, **Organizations** e outros **Spectators**
+- ✅ **Players** podem seguir **Spectators**, **Organizations** e outros **Players**  
+- ✅ **Organizations** podem seguir **Players**, **Spectators** e outras **Organizations**
+
+##### 🎯 Seguimento Entre Espectadores
+
+```http
+# Seguir outro espectador (requer auth SPECTATOR)
+POST /api/spectators/2/follow
+Authorization: Bearer <token>
+
+# Deixar de seguir espectador (requer auth SPECTATOR)
+DELETE /api/spectators/2/follow
+Authorization: Bearer <token>
+
+# Ver seguidores de um espectador (público)
+GET /api/spectators/1/followers?page=0&size=20
+
+# Ver quem um espectador está seguindo (público)
+GET /api/spectators/1/following?page=0&size=20
+
+# Verificar se estou seguindo um espectador (requer auth SPECTATOR)
+GET /api/spectators/2/is-following
+Authorization: Bearer <token>
+
+# Ver meus seguidores (requer auth SPECTATOR)
+GET /api/spectators/my-followers?page=0&size=20
+Authorization: Bearer <token>
+
+# Ver quem estou seguindo (requer auth SPECTATOR)
+GET /api/spectators/my-following?page=0&size=20
+Authorization: Bearer <token>
+```
+
+##### 🎯 Seguimento Cross-Type (Espectadores seguindo Jogadoras/Organizações)
+
+```http
+# Seguir uma jogadora (requer auth SPECTATOR)
+POST /api/spectators/players/1/follow
+Authorization: Bearer <token>
+
+# Deixar de seguir jogadora (requer auth SPECTATOR)
+DELETE /api/spectators/players/1/follow
+Authorization: Bearer <token>
+
+# Seguir uma organização (requer auth SPECTATOR)
+POST /api/spectators/organizations/1/follow
+Authorization: Bearer <token>
+
+# Deixar de seguir organização (requer auth SPECTATOR)
+DELETE /api/spectators/organizations/1/follow
+Authorization: Bearer <token>
+
+# Ver jogadoras que um espectador está seguindo (público)
+GET /api/spectators/1/following-players?page=0&size=20
+
+# Ver organizações que um espectador está seguindo (público)
+GET /api/spectators/1/following-organizations?page=0&size=20
+
+# Verificar se estou seguindo uma jogadora (requer auth SPECTATOR)
+GET /api/spectators/players/1/is-following
+Authorization: Bearer <token>
+
+# Verificar se estou seguindo uma organização (requer auth SPECTATOR)
+GET /api/spectators/organizations/1/is-following
+Authorization: Bearer <token>
+
+# Ver jogadoras que estou seguindo (requer auth SPECTATOR)
+GET /api/spectators/my-following-players?page=0&size=20
+Authorization: Bearer <token>
+
+# Ver organizações que estou seguindo (requer auth SPECTATOR)
+GET /api/spectators/my-following-organizations?page=0&size=20
+Authorization: Bearer <token>
+```
+
+##### 🏃‍♀️ Seguimento Universal para Players
+
+```http
+# Player seguindo Spectators
+POST /api/players/spectators/2/follow
+Authorization: Bearer <token>
+
+DELETE /api/players/spectators/2/follow
+Authorization: Bearer <token>
+
+# Player seguindo Organizations
+POST /api/players/organizations/3/follow
+Authorization: Bearer <token>
+
+DELETE /api/players/organizations/3/follow
+Authorization: Bearer <token>
+
+# Ver listas de seguimento do Player (público)
+GET /api/players/1/following-spectators?page=0&size=20
+GET /api/players/1/following-organizations?page=0&size=20
+GET /api/players/1/spectator-followers?page=0&size=20
+GET /api/players/1/organization-followers?page=0&size=20
+
+# Verificações pessoais (requer auth PLAYER)
+GET /api/players/spectators/2/is-following
+GET /api/players/organizations/3/is-following
+GET /api/players/my-following-spectators
+GET /api/players/my-following-organizations
+Authorization: Bearer <token>
+```
+
+##### 🏢 Seguimento Universal para Organizations
+
+```http
+# Organization seguindo Players
+POST /api/organizations/players/1/follow
+Authorization: Bearer <token>
+
+DELETE /api/organizations/players/1/follow
+Authorization: Bearer <token>
+
+# Organization seguindo Spectators
+POST /api/organizations/spectators/2/follow
+Authorization: Bearer <token>
+
+DELETE /api/organizations/spectators/2/follow
+Authorization: Bearer <token>
+
+# Organization seguindo Organizations
+POST /api/organizations/3/follow
+Authorization: Bearer <token>
+
+DELETE /api/organizations/3/follow
+Authorization: Bearer <token>
+
+# Ver listas de seguimento da Organization (público)
+GET /api/organizations/1/following-players?page=0&size=20
+GET /api/organizations/1/following-spectators?page=0&size=20
+GET /api/organizations/1/following-organizations?page=0&size=20
+GET /api/organizations/1/player-followers?page=0&size=20
+GET /api/organizations/1/spectator-followers?page=0&size=20
+GET /api/organizations/1/organization-followers?page=0&size=20
+
+# Verificações pessoais (requer auth ORGANIZATION)
+GET /api/organizations/players/1/is-following
+GET /api/organizations/spectators/2/is-following
+GET /api/organizations/3/is-following
+GET /api/organizations/my-following-players
+GET /api/organizations/my-following-spectators
+GET /api/organizations/my-following-organizations
+Authorization: Bearer <token>
+```
+
+#### 🔒 Regras do Sistema Universal de Seguimento
+
+- ✅ **Seguimento Universal**: **Todos podem seguir todos** - Players, Organizations e Spectators
+- ✅ **Seguimento Entre Tipos Iguais**: Players ↔ Players, Organizations ↔ Organizations, Spectators ↔ Spectators
+- ✅ **Seguimento Cross-Type**: Players ↔ Spectators ↔ Organizations (todas as combinações)
+- ✅ **Autenticação**: Apenas usuários autenticados podem seguir/deixar de seguir
+- ✅ **Validações**: Não é possível seguir a si mesmo ou duplicar seguimentos
+- ✅ **Listas Públicas**: Seguidores e seguindo são visíveis publicamente
+- ✅ **Verificações Privadas**: Verificação de seguimento requer autenticação
+- ✅ **Contadores Automáticos**: Contadores de seguidores/seguindo atualizados automaticamente
+- ✅ **Sincronização Bidirecional**: Relacionamentos mantidos em ambas as direções
+- ✅ **Relacionamentos Bidirecionais**: Quando A segue B, B automaticamente tem A como seguidor
 
 ### ⚽ Sistema de Jogos (`/api/games`)
 
-O sistema de jogos foi **completamente refatorado** para suportar **três tipos distintos de jogos**, cada um com suas próprias regras de negócio e funcionalidades específicas.
+O sistema de jogos suporta **três tipos distintos de jogos**, cada um com suas próprias regras de negócio e funcionalidades específicas.
 
 #### 🎯 Tipos de Jogos Disponíveis
 
@@ -362,7 +543,7 @@ O sistema de jogos foi **completamente refatorado** para suportar **três tipos 
 | **🏆 CHAMPIONSHIP** | Jogadoras | Individual ou Time | Jogos de campeonato competitivos |
 | **🏅 CUP** | Organizações | Sistema de Convites | Jogos oficiais de copa |
 
-#### 📊 Estrutura Atualizada do Game
+#### 📊 Estrutura do Game
 
 ```json
 {
@@ -377,8 +558,10 @@ O sistema de jogos foi **completamente refatorado** para suportar **três tipos 
   "status": "SCHEDULED",
   "homeGoals": 0,
   "awayGoals": 0,
-  "winner": null,
-  "winningTeamSide": null,
+  "homeTeam": null,
+  "awayTeam": null,
+  "championship": null,
+  "round": null,
   "createdAt": "2024-12-10T10:00:00",
   "updatedAt": "2024-12-10T10:00:00"
 }
@@ -422,7 +605,7 @@ Authorization: Bearer <token>
 }
 ```
 
-##### 📍 Consultas por Tipo
+##### 📍 Consultas
 
 ```http
 # Listar todos os jogos
@@ -447,6 +630,9 @@ GET /api/games/status/SCHEDULED?page=0&size=10
 
 # Buscar por campeonato
 GET /api/games/championship?championship=Copa%20Nacional&page=0&size=10
+
+# Buscar por período
+GET /api/games/date-range?startDate=2024-12-01T00:00:00&endDate=2024-12-31T23:59:59&page=0&size=10
 ```
 
 ##### 📍 Operações Gerais
@@ -468,10 +654,6 @@ Authorization: Bearer <token>
 
 # Atualizar placar (requer auth - apenas criador)
 PATCH /api/games/1/score?homeGoals=2&awayGoals=1
-Authorization: Bearer <token>
-
-# Inscrever-se no jogo (requer auth)
-POST /api/games/1/subscribe
 Authorization: Bearer <token>
 ```
 
@@ -496,10 +678,11 @@ DELETE /api/game-participants/leave/1
 Authorization: Bearer <token>
 
 # Ver participantes de um jogo
-GET /api/game-participants/game/1?page=0&size=20
+GET /api/game-participants/game/1
 
 # Ver minhas participações
 GET /api/game-participants/my-participations?page=0&size=10
+Authorization: Bearer <token>
 
 # Ver participações por jogadora
 GET /api/game-participants/player/123?page=0&size=10
@@ -507,21 +690,6 @@ GET /api/game-participants/player/123?page=0&size=10
 # Ver participações por time
 GET /api/game-participants/team/456?page=0&size=10
 ```
-
-##### 🎯 Tipos de Participação
-
-| Tipo | Descrição |
-|------|-----------|
-| `INDIVIDUAL` | Jogadora participa sozinha |
-| `WITH_TEAM` | Jogadora participa com seu time |
-
-##### 🎯 Status de Participação
-
-| Status | Descrição |
-|--------|-----------|
-| `PENDING` | Participação pendente de confirmação |
-| `CONFIRMED` | Participação confirmada |
-| `CANCELLED` | Participação cancelada |
 
 #### 🏅 Sistema de Convites (Jogos de Copa)
 
@@ -553,7 +721,7 @@ DELETE /api/game-invites/cancel/10
 Authorization: Bearer <token>
 
 # Ver convites de um jogo
-GET /api/game-invites/game/1?page=0&size=20
+GET /api/game-invites/game/1
 
 # Ver convites por organização
 GET /api/game-invites/organization/123?page=0&size=10
@@ -570,29 +738,12 @@ GET /api/game-invites/sent?page=0&size=10
 Authorization: Bearer <token>
 ```
 
-##### 🎯 Status de Convites
-
-| Status | Descrição |
-|--------|-----------|
-| `PENDING` | Convite enviado, aguardando resposta |
-| `ACCEPTED` | Convite aceito pelo time |
-| `REJECTED` | Convite rejeitado pelo time |
-| `CANCELLED` | Convite cancelado pela organização |
-| `EXPIRED` | Convite expirado |
-
-##### 🎯 Posições no Jogo
-
-| Posição | Descrição |
-|---------|-----------|
-| `HOME` | Time da casa |
-| `AWAY` | Time visitante |
-
-#### 🔒 Regras de Negócio e Validações
+#### 🔒 Regras de Negócio dos Jogos
 
 ##### 🎯 Permissões por Tipo de Usuário
 
 | Ação | PLAYER | ORGANIZATION |
-|------|--------|--------------|
+|------|--------|-----------|
 | Criar Amistoso | ✅ | ❌ |
 | Criar Campeonato | ✅ | ❌ |
 | Criar Copa | ❌ | ✅ |
@@ -608,157 +759,26 @@ Authorization: Bearer <token>
 - **Conflitos**: Validação de horários conflitantes
 - **Status**: Apenas jogos com status `SCHEDULED` aceitam participações/convites
 
-##### 🎯 Lógica de Vencedores
-
-| Cenário | Retorno |
-|---------|---------|
-| Copa - Organizações diferentes | `winner` (Organization) |
-| Copa - Mesma organização | `winningTeamSide` (1 ou 2) |
-| Amistoso/Campeonato | `winningTeamSide` (1 ou 2) |
-| Empate ou não finalizado | `null` |
-
-#### 📋 Exemplos de Resposta
-
-##### 🎯 GameResponse (Amistoso)
-
-```json
-{
-  "id": 1,
-  "gameType": "FRIENDLY",
-  "gameName": "Pelada do Final de Semana",
-  "hostUsername": "maria_silva",
-  "hostId": 123,
-  "gameDate": "2024-12-15T15:00:00",
-  "venue": "Campo do Bairro",
-  "description": "Jogo descontraído entre amigas",
-  "status": "SCHEDULED",
-  "homeGoals": 0,
-  "awayGoals": 0,
-  "winner": null,
-  "winningTeamSide": null,
-  "createdAt": "2024-12-10T10:00:00",
-  "updatedAt": "2024-12-10T10:00:00",
-  "homeTeam": null,
-  "awayTeam": null,
-  "championship": null,
-  "round": null
-}
-```
-
-##### 🎯 GameResponse (Copa)
-
-```json
-{
-  "id": 2,
-  "gameType": "CUP",
-  "gameName": null,
-  "hostUsername": null,
-  "hostId": null,
-  "gameDate": "2024-12-25T14:00:00",
-  "venue": "Arena Principal",
-  "description": null,
-  "status": "FINISHED",
-  "homeGoals": 3,
-  "awayGoals": 1,
-  "winner": {
-    "id": 1,
-    "name": "Federação Paulista",
-    "description": "Organização oficial do futebol feminino"
-  },
-  "winningTeamSide": 1,
-  "createdAt": "2024-12-20T09:00:00",
-  "updatedAt": "2024-12-25T16:00:00",
-  "homeTeam": {
-    "id": 1,
-    "name": "Santos FC Feminino",
-    "city": "Santos"
-  },
-  "awayTeam": {
-    "id": 2,
-    "name": "Corinthians Feminino",
-    "city": "São Paulo"
-  },
-  "championship": "Copa Nacional Feminina",
-  "round": "Final"
-}
-```
-
-##### 🎯 GameParticipantResponse
-
-```json
-{
-  "id": 10,
-  "game": {
-    "id": 1,
-    "gameName": "Pelada do Final de Semana",
-    "gameType": "FRIENDLY"
-  },
-  "player": {
-    "id": 123,
-    "name": "Maria Silva",
-    "username": "maria_silva"
-  },
-  "team": {
-    "id": 456,
-    "name": "Time das Amigas",
-    "city": "São Paulo"
-  },
-  "teamSide": 1,
-  "status": "CONFIRMED",
-  "joinedAt": "2024-12-11T14:30:00"
-}
-```
-
-##### 🎯 GameInviteResponse
-
-```json
-{
-  "id": 20,
-  "game": {
-    "id": 2,
-    "championship": "Copa Nacional Feminina",
-    "gameType": "CUP"
-  },
-  "organization": {
-    "id": 1,
-    "name": "Federação Paulista",
-    "description": "Organização oficial"
-  },
-  "team": {
-    "id": 1,
-    "name": "Santos FC Feminino",
-    "city": "Santos"
-  },
-  "teamPosition": "HOME",
-  "message": "Convite oficial para participar da final",
-  "status": "ACCEPTED",
-  "sentAt": "2024-12-20T10:00:00",
-  "respondedAt": "2024-12-20T15:30:00"
-}
-```
-
-#### 🚨 Códigos de Erro Específicos
-
-| Código | Descrição |
-|--------|-----------|
-| `GAME_001` | Tipo de usuário não autorizado para esta ação |
-| `GAME_002` | Jogo não encontrado |
-| `GAME_003` | Participação já existe |
-| `GAME_004` | Convite já enviado |
-| `GAME_005` | Capacidade máxima atingida |
-| `GAME_006` | Conflito de horário |
-| `GAME_007` | Status do jogo não permite esta ação |
-| `GAME_008` | Convite expirado |
-| `GAME_009` | Apenas criador pode modificar o jogo |
-| `GAME_010` | Time já possui convite pendente |
-
 ### 📝 Posts (`/api/posts`)
 
+Sistema completo de posts com **sistema avançado de likes** que rastreia individualmente quem curtiu cada post.
+
+#### 🔑 Características do Sistema de Likes
+- ✅ **Rastreamento Individual**: Sabe exatamente quem curtiu cada post
+- ✅ **Informação Automática**: Todo GET de posts inclui informações de likes
+- ✅ **Validações**: Usuário não pode curtir o mesmo post duas vezes
+- ✅ **Batch Operations**: Verificação de múltiplos posts de uma vez
+- ✅ **Contagem Precisa**: Sincronização entre contador e tabela de likes
+
+#### 📍 Endpoints de Posts
+
+##### 📖 Consultas de Posts
+
 ```http
-# Listar todos
+# Listar todos os posts (inclui informações de likes automaticamente)
 GET /api/posts?page=0&size=20
 
-# Buscar por ID
+# Buscar por ID (inclui informações de likes automaticamente)
 GET /api/posts/1
 
 # Buscar por autor
@@ -772,7 +792,7 @@ Authorization: Bearer <token>
 GET /api/posts/role/PLAYER?page=0&size=10
 
 # Buscar por tipo
-GET /api/posts/type/MATCH_HIGHLIGHT?page=0&size=10
+GET /api/posts/type/GENERAL?page=0&size=10
 
 # Buscar mais curtidos
 GET /api/posts/most-liked?page=0&size=10
@@ -782,12 +802,16 @@ GET /api/posts/with-images?page=0&size=10
 
 # Buscar por conteúdo
 GET /api/posts/search?content=gol&page=0&size=10
+```
 
+##### ✏️ Operações de Posts
+
+```http
 # Criar post (requer auth)
 POST /api/posts
 Authorization: Bearer <token>
 {
-  "content": "Preparando para o próximo jogo! 💪⚽",
+  "content": "Preparando para o próximo treino! 💪⚽",
   "type": "GENERAL",
   "imageUrl": "https://example.com/treino.jpg"
 }
@@ -803,15 +827,47 @@ Authorization: Bearer <token>
 # Deletar post (requer auth - apenas próprio post)
 DELETE /api/posts/1
 Authorization: Bearer <token>
+```
 
+##### ❤️ Sistema de Likes
+
+```http
 # Curtir post (requer auth)
 POST /api/posts/1/like
 Authorization: Bearer <token>
+# Retorna: PostLikeResponse com informações do like
 
 # Descurtir post (requer auth)
-POST /api/posts/1/unlike
+DELETE /api/posts/1/like
 Authorization: Bearer <token>
 
+# Verificar se usuário curtiu o post (requer auth)
+GET /api/posts/1/liked
+Authorization: Bearer <token>
+# Retorna: {"hasLiked": true}
+
+# Listar todos que curtiram o post
+GET /api/posts/1/likes
+# Retorna: Lista de PostLikeResponse
+
+# Obter contagem total de likes
+GET /api/posts/1/likes/count
+# Retorna: {"totalLikes": 15}
+
+# Ver posts curtidos pelo usuário atual (requer auth)
+GET /api/post-likes/my-likes
+Authorization: Bearer <token>
+
+# Verificar múltiplos posts de uma vez (batch) (requer auth)
+POST /api/post-likes/check-liked
+Authorization: Bearer <token>
+[1, 2, 3, 4, 5]
+# Retorna: {"likedPostIds": [1, 3, 5]}
+```
+
+##### 📊 Outras Interações
+
+```http
 # Comentar post (requer auth)
 POST /api/posts/1/comment
 Authorization: Bearer <token>
@@ -820,6 +876,62 @@ Authorization: Bearer <token>
 POST /api/posts/1/share
 Authorization: Bearer <token>
 ```
+
+#### 📋 Estrutura de Resposta dos Posts
+
+Todos os endpoints de consulta de posts agora retornam informações completas de likes:
+
+```json
+{
+  "id": 1,
+  "authorId": 123,
+  "authorUsername": "maria_silva",
+  "authorName": "Maria Silva",
+  "authorType": "PLAYER",
+  "content": "Preparando para o próximo treino! 💪⚽",
+  "imageUrl": "https://example.com/treino.jpg",
+  "type": "GENERAL",
+  "likes": 15,
+  "comments": 3,
+  "shares": 2,
+  "createdAt": "2025-09-16T14:30:00",
+  "updatedAt": "2025-09-16T14:30:00",
+  
+  // ✨ NOVAS INFORMAÇÕES DE LIKES
+  "isLikedByCurrentUser": true,
+  "totalLikes": 15,
+  "recentLikes": [
+    {
+      "id": 45,
+      "userId": 456,
+      "userUsername": "ana_costa",
+      "userName": "Ana Costa",
+      "userType": "PLAYER",
+      "createdAt": "2025-09-16T15:20:00"
+    },
+    {
+      "id": 44,
+      "userId": 789,
+      "userUsername": "santos_fc",
+      "userName": "Santos FC Feminino",
+      "userType": "ORGANIZATION",
+      "createdAt": "2025-09-16T15:15:00"
+    }
+  ]
+}
+```
+
+#### 📝 Tipos de Posts Disponíveis
+
+| Tipo | Descrição | Usado por |
+|------|-----------|-----------|
+| `GENERAL` | Posts gerais | Todos |
+| `TRAINING` | Posts sobre treinos | PLAYER |
+| `MATCH` | Posts sobre jogos | Todos |
+| `ACHIEVEMENT` | Conquistas e vitórias | Todos |
+| `NEWS` | Notícias e atualizações | ORGANIZATION |
+| `ORGANIZATION_UPDATE` | Atualizações da organização | ORGANIZATION |
+| `SPECTATOR_OPINION` | Opiniões de espectadores | SPECTATOR |
 
 ### 🏆 Sistema de Times (`/api/teams`)
 
@@ -970,17 +1082,25 @@ curl -X POST http://localhost:8080/api/teams/1/invites \
     "invitedPlayerId": 2
   }'
 
-# 7. Criar jogo (jogadoras também podem criar jogos)
-curl -X POST http://localhost:8080/api/games \
+# 7. Criar jogo amistoso
+curl -X POST http://localhost:8080/api/games/friendly \
   -H "Authorization: Bearer SEU_TOKEN_AQUI" \
   -H "Content-Type: application/json" \
   -d '{
-    "homeTeamId": 1,
-    "awayTeamId": 2,
+    "gameName": "Pelada do Final de Semana",
     "gameDate": "2024-12-25T14:00:00",
-    "venue": "Estádio do Pacaembu",
-    "championship": "Copa São Paulo Feminina",
-    "round": "Quartas de Final"
+    "venue": "Campo do Bairro",
+    "description": "Jogo descontraído entre amigas"
+  }'
+
+# 8. Participar do jogo criado
+curl -X POST http://localhost:8080/api/game-participants/join \
+  -H "Authorization: Bearer SEU_TOKEN_AQUI" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "gameId": 1,
+    "participationType": "INDIVIDUAL",
+    "teamSide": 1
   }'
 ```
 
@@ -1057,8 +1177,8 @@ curl -X POST http://localhost:8080/api/auth/login \
     "password": "senha123"
   }'
 
-# 3. Criar jogo
-curl -X POST http://localhost:8080/api/games \
+# 3. Criar jogo de copa
+curl -X POST http://localhost:8080/api/games/cup \
   -H "Authorization: Bearer SEU_TOKEN_AQUI" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1070,7 +1190,18 @@ curl -X POST http://localhost:8080/api/games \
     "round": "Final"
   }'
 
-# 4. Criar post da organização
+# 4. Enviar convite para time
+curl -X POST http://localhost:8080/api/game-invites/send \
+  -H "Authorization: Bearer SEU_TOKEN_AQUI" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "gameId": 1,
+    "teamId": 1,
+    "teamPosition": "HOME",
+    "message": "Convite oficial para participar da final"
+  }'
+
+# 5. Criar post da organização
 curl -X POST http://localhost:8080/api/posts \
   -H "Authorization: Bearer SEU_TOKEN_AQUI" \
   -H "Content-Type: application/json" \
@@ -1109,16 +1240,15 @@ curl -X POST http://localhost:8080/api/auth/login \
 curl -X POST http://localhost:8080/api/players/1/follow \
   -H "Authorization: Bearer SEU_TOKEN_AQUI"
 
-# 4. Inscrever-se em jogo
-curl -X POST http://localhost:8080/api/games/1/subscribe \
-  -H "Authorization: Bearer SEU_TOKEN_AQUI"
+# 4. Ver jogos disponíveis
+curl -X GET http://localhost:8080/api/games?page=0&size=10
 
 # 5. Criar post de opinião
 curl -X POST http://localhost:8080/api/posts \
   -H "Authorization: Bearer SEU_TOKEN_AQUI" \
   -H "Content-Type: application/json" \
   -d '{
-    "content": "Que jogo incrível! O futebol feminino está cada vez melhor! 👏⚽",
+    "content": "Que partida incrível! O futebol feminino está cada vez melhor! 👏⚽",
     "type": "SPECTATOR_OPINION"
   }'
 ```
