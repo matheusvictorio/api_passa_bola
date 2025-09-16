@@ -754,11 +754,24 @@ Authorization: Bearer <token>
 
 ### 📝 Posts (`/api/posts`)
 
+Sistema completo de posts com **sistema avançado de likes** que rastreia individualmente quem curtiu cada post.
+
+#### 🔑 Características do Sistema de Likes
+- ✅ **Rastreamento Individual**: Sabe exatamente quem curtiu cada post
+- ✅ **Informação Automática**: Todo GET de posts inclui informações de likes
+- ✅ **Validações**: Usuário não pode curtir o mesmo post duas vezes
+- ✅ **Batch Operations**: Verificação de múltiplos posts de uma vez
+- ✅ **Contagem Precisa**: Sincronização entre contador e tabela de likes
+
+#### 📍 Endpoints de Posts
+
+##### 📖 Consultas de Posts
+
 ```http
-# Listar todos
+# Listar todos os posts (inclui informações de likes automaticamente)
 GET /api/posts?page=0&size=20
 
-# Buscar por ID
+# Buscar por ID (inclui informações de likes automaticamente)
 GET /api/posts/1
 
 # Buscar por autor
@@ -772,7 +785,7 @@ Authorization: Bearer <token>
 GET /api/posts/role/PLAYER?page=0&size=10
 
 # Buscar por tipo
-GET /api/posts/type/MATCH_HIGHLIGHT?page=0&size=10
+GET /api/posts/type/GENERAL?page=0&size=10
 
 # Buscar mais curtidos
 GET /api/posts/most-liked?page=0&size=10
@@ -782,7 +795,11 @@ GET /api/posts/with-images?page=0&size=10
 
 # Buscar por conteúdo
 GET /api/posts/search?content=gol&page=0&size=10
+```
 
+##### ✏️ Operações de Posts
+
+```http
 # Criar post (requer auth)
 POST /api/posts
 Authorization: Bearer <token>
@@ -803,15 +820,47 @@ Authorization: Bearer <token>
 # Deletar post (requer auth - apenas próprio post)
 DELETE /api/posts/1
 Authorization: Bearer <token>
+```
 
+##### ❤️ Sistema de Likes
+
+```http
 # Curtir post (requer auth)
 POST /api/posts/1/like
 Authorization: Bearer <token>
+# Retorna: PostLikeResponse com informações do like
 
 # Descurtir post (requer auth)
-POST /api/posts/1/unlike
+DELETE /api/posts/1/like
 Authorization: Bearer <token>
 
+# Verificar se usuário curtiu o post (requer auth)
+GET /api/posts/1/liked
+Authorization: Bearer <token>
+# Retorna: {"hasLiked": true}
+
+# Listar todos que curtiram o post
+GET /api/posts/1/likes
+# Retorna: Lista de PostLikeResponse
+
+# Obter contagem total de likes
+GET /api/posts/1/likes/count
+# Retorna: {"totalLikes": 15}
+
+# Ver posts curtidos pelo usuário atual (requer auth)
+GET /api/post-likes/my-likes
+Authorization: Bearer <token>
+
+# Verificar múltiplos posts de uma vez (batch) (requer auth)
+POST /api/post-likes/check-liked
+Authorization: Bearer <token>
+[1, 2, 3, 4, 5]
+# Retorna: {"likedPostIds": [1, 3, 5]}
+```
+
+##### 📊 Outras Interações
+
+```http
 # Comentar post (requer auth)
 POST /api/posts/1/comment
 Authorization: Bearer <token>
@@ -820,6 +869,62 @@ Authorization: Bearer <token>
 POST /api/posts/1/share
 Authorization: Bearer <token>
 ```
+
+#### 📋 Estrutura de Resposta dos Posts
+
+Todos os endpoints de consulta de posts agora retornam informações completas de likes:
+
+```json
+{
+  "id": 1,
+  "authorId": 123,
+  "authorUsername": "maria_silva",
+  "authorName": "Maria Silva",
+  "authorType": "PLAYER",
+  "content": "Preparando para o próximo jogo! 💪⚽",
+  "imageUrl": "https://example.com/treino.jpg",
+  "type": "GENERAL",
+  "likes": 15,
+  "comments": 3,
+  "shares": 2,
+  "createdAt": "2025-09-16T14:30:00",
+  "updatedAt": "2025-09-16T14:30:00",
+  
+  // ✨ NOVAS INFORMAÇÕES DE LIKES
+  "isLikedByCurrentUser": true,
+  "totalLikes": 15,
+  "recentLikes": [
+    {
+      "id": 45,
+      "userId": 456,
+      "userUsername": "ana_costa",
+      "userName": "Ana Costa",
+      "userType": "PLAYER",
+      "createdAt": "2025-09-16T15:20:00"
+    },
+    {
+      "id": 44,
+      "userId": 789,
+      "userUsername": "santos_fc",
+      "userName": "Santos FC Feminino",
+      "userType": "ORGANIZATION",
+      "createdAt": "2025-09-16T15:15:00"
+    }
+  ]
+}
+```
+
+#### 📝 Tipos de Posts Disponíveis
+
+| Tipo | Descrição | Usado por |
+|------|-----------|-----------|
+| `GENERAL` | Posts gerais | Todos |
+| `TRAINING` | Posts sobre treinos | PLAYER |
+| `MATCH` | Posts sobre jogos | Todos |
+| `ACHIEVEMENT` | Conquistas e vitórias | Todos |
+| `NEWS` | Notícias e atualizações | ORGANIZATION |
+| `ORGANIZATION_UPDATE` | Atualizações da organização | ORGANIZATION |
+| `SPECTATOR_OPINION` | Opiniões de espectadores | SPECTATOR |
 
 ### 🏆 Sistema de Times (`/api/teams`)
 

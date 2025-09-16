@@ -2,6 +2,7 @@ package com.fiap.projects.apipassabola.service;
 
 import com.fiap.projects.apipassabola.dto.request.PostRequest;
 import com.fiap.projects.apipassabola.dto.response.PostResponse;
+import com.fiap.projects.apipassabola.dto.response.PostLikeResponse;
 import com.fiap.projects.apipassabola.entity.*;
 import com.fiap.projects.apipassabola.exception.BusinessException;
 import com.fiap.projects.apipassabola.exception.ResourceNotFoundException;
@@ -12,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -24,6 +26,7 @@ public class PostService {
     private final OrganizationRepository organizationRepository;
     private final SpectatorRepository spectatorRepository;
     private final UserContextService userContextService;
+    private final PostLikeService postLikeService;
     
     public Page<PostResponse> findAll(Pageable pageable) {
         return postRepository.findAll(pageable).map(this::convertToResponse);
@@ -139,7 +142,10 @@ public class PostService {
         postRepository.deleteById(id);
     }
     
+    @Deprecated
     public PostResponse likePost(Long id) {
+        // Deprecated - use PostLikeService.likePost() instead
+        // This method is kept for backward compatibility
         Post post = postRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Post", "id", id));
         
@@ -148,7 +154,10 @@ public class PostService {
         return convertToResponse(savedPost);
     }
     
+    @Deprecated
     public PostResponse unlikePost(Long id) {
+        // Deprecated - use PostLikeService.unlikePost() instead
+        // This method is kept for backward compatibility
         Post post = postRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Post", "id", id));
         
@@ -194,6 +203,7 @@ public class PostService {
             authorName = getCurrentUserName(post.getAuthorId(), post.getAuthorType());
         }
         response.setAuthorName(authorName);
+        response.setAuthorType(post.getAuthorType());
         
         response.setContent(post.getContent());
         response.setImageUrl(post.getImageUrl());
@@ -203,6 +213,26 @@ public class PostService {
         response.setShares(post.getShares());
         response.setCreatedAt(post.getCreatedAt());
         response.setUpdatedAt(post.getUpdatedAt());
+        
+        // Add like information for frontend
+        try {
+            // Check if current user has liked this post
+            response.setIsLikedByCurrentUser(postLikeService.hasUserLikedPost(post.getId()));
+            
+            // Get recent likes (last 3 for UI display)
+            List<PostLikeResponse> recentLikes = postLikeService.getRecentPostLikes(post.getId(), 3);
+            response.setRecentLikes(recentLikes);
+            
+            // Get total likes count from PostLike table (more accurate than post.likes)
+            Long totalLikes = postLikeService.getPostLikesCount(post.getId());
+            response.setTotalLikes(totalLikes);
+            
+        } catch (Exception e) {
+            // User not authenticated or other error - set default values
+            response.setIsLikedByCurrentUser(false);
+            response.setRecentLikes(List.of());
+            response.setTotalLikes((long) post.getLikes());
+        }
         
         return response;
     }
