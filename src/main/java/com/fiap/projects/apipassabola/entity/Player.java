@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,6 +21,7 @@ import java.util.Set;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(exclude = {"teams", "followers", "following", "favoriteOrganizations", "subscribedGames", "posts", "createdGames"})
 public class Player implements UserDetails {
     
     @Id
@@ -66,6 +68,15 @@ public class Player implements UserDetails {
     @Column(name = "games_played")
     private Integer gamesPlayed = 0;
     
+    // Teams relationship - Player can be in multiple teams
+    @ManyToMany
+    @JoinTable(
+        name = "team_players",
+        joinColumns = @JoinColumn(name = "player_id"),
+        inverseJoinColumns = @JoinColumn(name = "team_id")
+    )
+    private Set<Team> teams = new HashSet<>();
+    
     // Posts created by this player
     // Note: This is a derived relationship, not stored directly
     @Transient
@@ -84,11 +95,11 @@ public class Player implements UserDetails {
     
     @ManyToMany
     @JoinTable(
-        name = "player_teams",
+        name = "player_favorite_organizations",
         joinColumns = @JoinColumn(name = "player_id"),
-        inverseJoinColumns = @JoinColumn(name = "team_id")
+        inverseJoinColumns = @JoinColumn(name = "organization_id")
     )
-    private Set<Organization> teams = new HashSet<>();
+    private Set<Organization> favoriteOrganizations = new HashSet<>();
     
     // Games where this player's organization participates
     // Note: This is a derived relationship, not stored directly

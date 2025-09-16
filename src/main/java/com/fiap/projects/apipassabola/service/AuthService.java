@@ -185,8 +185,8 @@ public class AuthService {
         
         String token = jwtUtil.generateToken(spectator, extraClaims);
         
-        return new AuthResponse(token, spectator.getId(), spectator.getUsername(), spectator.getEmail(), 
-                User.Role.valueOf(spectator.getUserType().name()), spectator.getId());
+        return new AuthResponse(token, spectator.getId(), spectator.getRealUsername(), spectator.getEmail(), 
+                User.Role.SPECTATOR, spectator.getId());
     }
     
     private void validateUniqueCredentials(String username, String email) {

@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -73,18 +74,38 @@ public class PlayerController {
         return ResponseEntity.noContent().build();
     }
     
-    @PostMapping("/{followerId}/follow/{followedId}")
+    @PostMapping("/{id}/follow")
     @PreAuthorize("hasRole('PLAYER') or hasRole('SPECTATOR')")
     public ResponseEntity<PlayerResponse> followPlayer(
+            @PathVariable Long id,
+            Authentication authentication) {
+        String currentUserEmail = authentication.getName();
+        PlayerResponse followedPlayer = playerService.followByEmail(currentUserEmail, id);
+        return ResponseEntity.ok(followedPlayer);
+    }
+    
+    @PostMapping("/{followerId}/follow/{followedId}")
+    @PreAuthorize("hasRole('PLAYER') or hasRole('SPECTATOR')")
+    public ResponseEntity<PlayerResponse> followPlayerByIds(
             @PathVariable Long followerId,
             @PathVariable Long followedId) {
         PlayerResponse followedPlayer = playerService.follow(followerId, followedId);
         return ResponseEntity.ok(followedPlayer);
     }
     
-    @DeleteMapping("/{followerId}/follow/{followedId}")
+    @DeleteMapping("/{id}/follow")
     @PreAuthorize("hasRole('PLAYER') or hasRole('SPECTATOR')")
     public ResponseEntity<PlayerResponse> unfollowPlayer(
+            @PathVariable Long id,
+            Authentication authentication) {
+        String currentUserEmail = authentication.getName();
+        PlayerResponse unfollowedPlayer = playerService.unfollowByEmail(currentUserEmail, id);
+        return ResponseEntity.ok(unfollowedPlayer);
+    }
+    
+    @DeleteMapping("/{followerId}/follow/{followedId}")
+    @PreAuthorize("hasRole('PLAYER') or hasRole('SPECTATOR')")
+    public ResponseEntity<PlayerResponse> unfollowPlayerByIds(
             @PathVariable Long followerId,
             @PathVariable Long followedId) {
         PlayerResponse unfollowedPlayer = playerService.unfollow(followerId, followedId);
