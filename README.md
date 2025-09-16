@@ -365,157 +365,130 @@ DELETE /api/spectators/1
 Authorization: Bearer <token>
 ```
 
-#### 👥 Sistema Universal de Seguimento
+#### 🌐 Sistema Universal de Seguimento (`/api/follow`)
 
-O sistema de seguimento foi **completamente expandido** para permitir que **todos os tipos de usuários possam seguir todos os outros tipos**:
+O sistema de seguimento foi **completamente unificado** com endpoints universais que funcionam para **todos os tipos de usuários**:
 
-- ✅ **Spectators** podem seguir **Players**, **Organizations** e outros **Spectators**
-- ✅ **Players** podem seguir **Spectators**, **Organizations** e outros **Players**  
-- ✅ **Organizations** podem seguir **Players**, **Spectators** e outras **Organizations**
+- ✅ **Qualquer usuário** pode seguir **qualquer outro usuário** (Player, Organization, Spectator)
+- ✅ **Endpoints únicos** que eliminam a complexidade de ter rotas separadas por tipo
+- ✅ **Sistema simplificado** e mais fácil de usar para o frontend
 
-##### 🎯 Seguimento Entre Espectadores
+##### 🎯 Endpoints Universais de Seguimento
 
 ```http
-# Seguir outro espectador (requer auth SPECTATOR)
-POST /api/spectators/2/follow
+# Seguir qualquer usuário (requer autenticação)
+POST /api/follow
+Authorization: Bearer <token>
+{
+  "targetUserId": 123,
+  "targetUserType": "PLAYER"  // ou "ORGANIZATION" ou "SPECTATOR"
+}
+
+# Deixar de seguir qualquer usuário (requer autenticação)
+DELETE /api/follow
+Authorization: Bearer <token>
+{
+  "targetUserId": 123,
+  "targetUserType": "PLAYER"
+}
+
+# Verificar se estou seguindo um usuário específico (requer autenticação)
+POST /api/follow/check
+Authorization: Bearer <token>
+{
+  "targetUserId": 123,
+  "targetUserType": "ORGANIZATION"
+}
+
+# Ver seguidores de qualquer usuário (público)
+GET /api/follow/followers/123/PLAYER?page=0&size=10
+
+# Ver quem um usuário está seguindo (público)
+GET /api/follow/following/123/SPECTATOR?page=0&size=10
+
+# Ver meus seguidores (requer autenticação)
+GET /api/follow/my-followers?page=0&size=10
 Authorization: Bearer <token>
 
-# Deixar de seguir espectador (requer auth SPECTATOR)
-DELETE /api/spectators/2/follow
-Authorization: Bearer <token>
-
-# Ver seguidores de um espectador (público)
-GET /api/spectators/1/followers?page=0&size=20
-
-# Ver quem um espectador está seguindo (público)
-GET /api/spectators/1/following?page=0&size=20
-
-# Verificar se estou seguindo um espectador (requer auth SPECTATOR)
-GET /api/spectators/2/is-following
-Authorization: Bearer <token>
-
-# Ver meus seguidores (requer auth SPECTATOR)
-GET /api/spectators/my-followers?page=0&size=20
-Authorization: Bearer <token>
-
-# Ver quem estou seguindo (requer auth SPECTATOR)
-GET /api/spectators/my-following?page=0&size=20
+# Ver quem estou seguindo (requer autenticação)
+GET /api/follow/my-following?page=0&size=10
 Authorization: Bearer <token>
 ```
 
-##### 🎯 Seguimento Cross-Type (Espectadores seguindo Jogadoras/Organizações)
+##### 📋 Estrutura de Resposta Universal
 
-```http
-# Seguir uma jogadora (requer auth SPECTATOR)
-POST /api/spectators/players/1/follow
-Authorization: Bearer <token>
-
-# Deixar de seguir jogadora (requer auth SPECTATOR)
-DELETE /api/spectators/players/1/follow
-Authorization: Bearer <token>
-
-# Seguir uma organização (requer auth SPECTATOR)
-POST /api/spectators/organizations/1/follow
-Authorization: Bearer <token>
-
-# Deixar de seguir organização (requer auth SPECTATOR)
-DELETE /api/spectators/organizations/1/follow
-Authorization: Bearer <token>
-
-# Ver jogadoras que um espectador está seguindo (público)
-GET /api/spectators/1/following-players?page=0&size=20
-
-# Ver organizações que um espectador está seguindo (público)
-GET /api/spectators/1/following-organizations?page=0&size=20
-
-# Verificar se estou seguindo uma jogadora (requer auth SPECTATOR)
-GET /api/spectators/players/1/is-following
-Authorization: Bearer <token>
-
-# Verificar se estou seguindo uma organização (requer auth SPECTATOR)
-GET /api/spectators/organizations/1/is-following
-Authorization: Bearer <token>
-
-# Ver jogadoras que estou seguindo (requer auth SPECTATOR)
-GET /api/spectators/my-following-players?page=0&size=20
-Authorization: Bearer <token>
-
-# Ver organizações que estou seguindo (requer auth SPECTATOR)
-GET /api/spectators/my-following-organizations?page=0&size=20
-Authorization: Bearer <token>
+```json
+{
+  "id": 123,
+  "username": "maria_silva",
+  "name": "Maria Silva",
+  "email": "maria@email.com",
+  "userType": "PLAYER",
+  "bio": "Atacante profissional",
+  "profilePhotoUrl": "https://example.com/photo.jpg",
+  "bannerUrl": "https://example.com/banner.jpg",
+  "phone": "(11) 99999-9999",
+  "createdAt": "2024-01-15T10:30:00",
+  
+  // Campos específicos por tipo de usuário
+  "birthDate": "1995-03-15",  // apenas para PLAYER e SPECTATOR
+  "cnpj": "12345678000199",   // apenas para ORGANIZATION
+  "city": "São Paulo",        // apenas para ORGANIZATION
+  "state": "SP"               // apenas para ORGANIZATION
+}
 ```
 
-##### 🏃‍♀️ Seguimento Universal para Players
+##### ✅ Vantagens do Sistema Universal
+
+- **Simplicidade**: Um único conjunto de endpoints para todos os tipos de usuário
+- **Consistência**: Mesma estrutura de request/response para todas as operações
+- **Flexibilidade**: Fácil de estender para novos tipos de usuário
+- **Manutenibilidade**: Menos código duplicado e mais fácil de manter
+- **Frontend Friendly**: Interface mais limpa e intuitiva para desenvolvedores
+
+##### 💡 Exemplos Práticos do Sistema Universal
 
 ```http
-# Player seguindo Spectators
-POST /api/players/spectators/2/follow
-Authorization: Bearer <token>
+# Exemplo 1: Jogadora seguindo uma organização
+POST /api/follow
+Authorization: Bearer <PLAYER_TOKEN>
+{
+  "targetUserId": 5,
+  "targetUserType": "ORGANIZATION"
+}
 
-DELETE /api/players/spectators/2/follow
-Authorization: Bearer <token>
+# Exemplo 2: Espectador seguindo uma jogadora
+POST /api/follow
+Authorization: Bearer <SPECTATOR_TOKEN>
+{
+  "targetUserId": 12,
+  "targetUserType": "PLAYER"
+}
 
-# Player seguindo Organizations
-POST /api/players/organizations/3/follow
-Authorization: Bearer <token>
+# Exemplo 3: Organização seguindo um espectador
+POST /api/follow
+Authorization: Bearer <ORGANIZATION_TOKEN>
+{
+  "targetUserId": 8,
+  "targetUserType": "SPECTATOR"
+}
 
-DELETE /api/players/organizations/3/follow
-Authorization: Bearer <token>
+# Exemplo 4: Verificar se estou seguindo alguém
+POST /api/follow/check
+Authorization: Bearer <TOKEN>
+{
+  "targetUserId": 15,
+  "targetUserType": "PLAYER"
+}
+# Resposta: true ou false
 
-# Ver listas de seguimento do Player (público)
-GET /api/players/1/following-spectators?page=0&size=20
-GET /api/players/1/following-organizations?page=0&size=20
-GET /api/players/1/spectator-followers?page=0&size=20
-GET /api/players/1/organization-followers?page=0&size=20
+# Exemplo 5: Ver seguidores de uma jogadora
+GET /api/follow/followers/12/PLAYER?page=0&size=10
+# Retorna lista mista de Players, Organizations e Spectators que seguem a jogadora
 
-# Verificações pessoais (requer auth PLAYER)
-GET /api/players/spectators/2/is-following
-GET /api/players/organizations/3/is-following
-GET /api/players/my-following-spectators
-GET /api/players/my-following-organizations
-Authorization: Bearer <token>
-```
-
-##### 🏢 Seguimento Universal para Organizations
-
-```http
-# Organization seguindo Players
-POST /api/organizations/players/1/follow
-Authorization: Bearer <token>
-
-DELETE /api/organizations/players/1/follow
-Authorization: Bearer <token>
-
-# Organization seguindo Spectators
-POST /api/organizations/spectators/2/follow
-Authorization: Bearer <token>
-
-DELETE /api/organizations/spectators/2/follow
-Authorization: Bearer <token>
-
-# Organization seguindo Organizations
-POST /api/organizations/3/follow
-Authorization: Bearer <token>
-
-DELETE /api/organizations/3/follow
-Authorization: Bearer <token>
-
-# Ver listas de seguimento da Organization (público)
-GET /api/organizations/1/following-players?page=0&size=20
-GET /api/organizations/1/following-spectators?page=0&size=20
-GET /api/organizations/1/following-organizations?page=0&size=20
-GET /api/organizations/1/player-followers?page=0&size=20
-GET /api/organizations/1/spectator-followers?page=0&size=20
-GET /api/organizations/1/organization-followers?page=0&size=20
-
-# Verificações pessoais (requer auth ORGANIZATION)
-GET /api/organizations/players/1/is-following
-GET /api/organizations/spectators/2/is-following
-GET /api/organizations/3/is-following
-GET /api/organizations/my-following-players
-GET /api/organizations/my-following-spectators
-GET /api/organizations/my-following-organizations
-Authorization: Bearer <token>
+# Exemplo 6: Ver quem uma organização está seguindo
+GET /api/follow/following/5/ORGANIZATION?page=0&size=10
+# Retorna lista mista de todos os tipos de usuários que a organização segue
 ```
 
 #### 🔒 Regras do Sistema Universal de Seguimento
@@ -1062,9 +1035,14 @@ curl -X POST http://localhost:8080/api/posts \
     "imageUrl": "https://example.com/gol.jpg"
   }'
 
-# 4. Seguir outra jogadora
-curl -X POST http://localhost:8080/api/players/2/follow \
-  -H "Authorization: Bearer SEU_TOKEN_AQUI"
+# 4. Seguir outra jogadora (usando sistema universal)
+curl -X POST http://localhost:8080/api/follow \
+  -H "Authorization: Bearer SEU_TOKEN_AQUI" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "targetUserId": 2,
+    "targetUserType": "PLAYER"
+  }'
 
 # 5. Criar um time
 curl -X POST http://localhost:8080/api/teams \
@@ -1125,13 +1103,23 @@ curl -X POST http://localhost:8080/api/teams \
     "nameTeam": "Estrelas do Futebol"
   }'
 
-# 3. Maria segue Ana (necessário para seguimento mútuo)
-curl -X POST http://localhost:8080/api/players/2/follow \
-  -H "Authorization: Bearer MARIA_TOKEN"
+# 3. Maria segue Ana (necessário para seguimento mútuo - usando sistema universal)
+curl -X POST http://localhost:8080/api/follow \
+  -H "Authorization: Bearer MARIA_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "targetUserId": 2,
+    "targetUserType": "PLAYER"
+  }'
 
-# 4. Ana segue Maria de volta (seguimento mútuo estabelecido)
-curl -X POST http://localhost:8080/api/players/1/follow \
-  -H "Authorization: Bearer ANA_TOKEN"
+# 4. Ana segue Maria de volta (seguimento mútuo estabelecido - usando sistema universal)
+curl -X POST http://localhost:8080/api/follow \
+  -H "Authorization: Bearer ANA_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "targetUserId": 1,
+    "targetUserType": "PLAYER"
+  }'
 
 # 5. Maria envia convite para Ana
 curl -X POST http://localhost:8080/api/teams/1/invites \
@@ -1236,9 +1224,14 @@ curl -X POST http://localhost:8080/api/auth/login \
     "password": "senha123"
   }'
 
-# 3. Seguir jogadora favorita
-curl -X POST http://localhost:8080/api/players/1/follow \
-  -H "Authorization: Bearer SEU_TOKEN_AQUI"
+# 3. Seguir jogadora favorita (usando sistema universal)
+curl -X POST http://localhost:8080/api/follow \
+  -H "Authorization: Bearer SEU_TOKEN_AQUI" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "targetUserId": 1,
+    "targetUserType": "PLAYER"
+  }'
 
 # 4. Ver jogos disponíveis
 curl -X GET http://localhost:8080/api/games?page=0&size=10
