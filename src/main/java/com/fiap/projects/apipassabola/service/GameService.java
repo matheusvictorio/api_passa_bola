@@ -164,6 +164,112 @@ public class GameService {
         return convertToResponse(savedGame);
     }
     
+    public GameResponse updateFriendlyGame(Long id, FriendlyGameUpdateRequest request) {
+        Game game = gameRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Game", "id", id));
+        
+        // Validate game type
+        if (game.getGameType() != GameType.FRIENDLY) {
+            throw new BusinessException("Game is not a friendly game");
+        }
+        
+        // Validate ownership - only the host can update friendly games
+        UserContextService.UserIdAndType currentUser = userContextService.getCurrentUserIdAndType();
+        if (!game.getHostId().equals(currentUser.getUserId()) || currentUser.getUserType() != UserType.PLAYER) {
+            throw new BusinessException("Only the game host can update this friendly game");
+        }
+        
+        // Update friendly game fields
+        game.setGameName(request.getGameName());
+        game.setGameDate(request.getGameDate());
+        game.setVenue(request.getVenue());
+        game.setDescription(request.getDescription());
+        game.setHomeGoals(request.getHomeGoals());
+        game.setAwayGoals(request.getAwayGoals());
+        game.setStatus(request.getStatus());
+        game.setNotes(request.getNotes());
+        
+        Game savedGame = gameRepository.save(game);
+        return convertToResponse(savedGame);
+    }
+    
+    public GameResponse updateChampionshipGame(Long id, ChampionshipGameUpdateRequest request) {
+        Game game = gameRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Game", "id", id));
+        
+        // Validate game type
+        if (game.getGameType() != GameType.CHAMPIONSHIP) {
+            throw new BusinessException("Game is not a championship game");
+        }
+        
+        // Validate ownership - only the host can update championship games
+        UserContextService.UserIdAndType currentUser = userContextService.getCurrentUserIdAndType();
+        if (!game.getHostId().equals(currentUser.getUserId()) || currentUser.getUserType() != UserType.PLAYER) {
+            throw new BusinessException("Only the game host can update this championship game");
+        }
+        
+        // Update championship game fields
+        game.setGameName(request.getGameName());
+        game.setGameDate(request.getGameDate());
+        game.setVenue(request.getVenue());
+        game.setDescription(request.getDescription());
+        game.setHomeGoals(request.getHomeGoals());
+        game.setAwayGoals(request.getAwayGoals());
+        game.setStatus(request.getStatus());
+        game.setNotes(request.getNotes());
+        
+        Game savedGame = gameRepository.save(game);
+        return convertToResponse(savedGame);
+    }
+    
+    public GameResponse updateCupGame(Long id, CupGameUpdateRequest request) {
+        Game game = gameRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Game", "id", id));
+        
+        // Validate game type
+        if (game.getGameType() != GameType.CUP) {
+            throw new BusinessException("Game is not a cup game");
+        }
+        
+        // Validate ownership - only the creator organization can update cup games
+        UserContextService.UserIdAndType currentUser = userContextService.getCurrentUserIdAndType();
+        if (!game.getHostId().equals(currentUser.getUserId()) || currentUser.getUserType() != UserType.ORGANIZATION) {
+            throw new BusinessException("Only the game creator organization can update this cup game");
+        }
+        
+        // Validate team IDs are different
+        if (request.getHomeTeamId().equals(request.getAwayTeamId())) {
+            throw new BusinessException("Home team and away team cannot be the same");
+        }
+        
+        // Update teams if changed
+        if (!request.getHomeTeamId().equals(game.getHomeTeam().getId())) {
+            Organization homeTeam = organizationRepository.findById(request.getHomeTeamId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Organization", "id", request.getHomeTeamId()));
+            game.setHomeTeam(homeTeam);
+        }
+        
+        if (!request.getAwayTeamId().equals(game.getAwayTeam().getId())) {
+            Organization awayTeam = organizationRepository.findById(request.getAwayTeamId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Organization", "id", request.getAwayTeamId()));
+            game.setAwayTeam(awayTeam);
+        }
+        
+        // Update cup game fields
+        game.setGameDate(request.getGameDate());
+        game.setVenue(request.getVenue());
+        game.setChampionship(request.getChampionship());
+        game.setRound(request.getRound());
+        game.setHomeGoals(request.getHomeGoals());
+        game.setAwayGoals(request.getAwayGoals());
+        game.setStatus(request.getStatus());
+        game.setNotes(request.getNotes());
+        
+        Game savedGame = gameRepository.save(game);
+        return convertToResponse(savedGame);
+    }
+    
+    @Deprecated
     public GameResponse update(Long id, GameRequest request) {
         Game game = gameRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Game", "id", id));

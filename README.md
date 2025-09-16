@@ -608,25 +608,67 @@ GET /api/games/championship?championship=Copa%20Nacional&page=0&size=10
 GET /api/games/date-range?startDate=2024-12-01T00:00:00&endDate=2024-12-31T23:59:59&page=0&size=10
 ```
 
+##### 📍 Operações de Update Específicas por Tipo
+
+```http
+# Atualizar jogo AMISTOSO (requer auth PLAYER - apenas host)
+PUT /api/games/friendly/1
+Authorization: Bearer <token>
+{
+  "gameName": "Amistoso Atualizado",
+  "gameDate": "2024-12-16T15:00:00",
+  "venue": "Novo Local",
+  "description": "Descrição atualizada",
+  "homeGoals": 2,
+  "awayGoals": 1,
+  "status": "FINISHED",
+  "notes": "Jogo muito disputado"
+}
+
+# Atualizar jogo de CAMPEONATO (requer auth PLAYER - apenas host)
+PUT /api/games/championship/1
+Authorization: Bearer <token>
+{
+  "gameName": "Campeonato Atualizado",
+  "gameDate": "2024-12-16T15:00:00",
+  "venue": "Novo Local",
+  "description": "Descrição atualizada",
+  "homeGoals": 3,
+  "awayGoals": 0,
+  "status": "FINISHED",
+  "notes": "Vitória convincente"
+}
+
+# Atualizar jogo de COPA (requer auth ORGANIZATION - apenas criador)
+PUT /api/games/cup/1
+Authorization: Bearer <token>
+{
+  "homeTeamId": 1,
+  "awayTeamId": 2,
+  "gameDate": "2024-12-16T15:00:00",
+  "venue": "Estádio Municipal",
+  "championship": "Copa Regional 2024",
+  "round": "Semifinal",
+  "homeGoals": 1,
+  "awayGoals": 0,
+  "status": "FINISHED",
+  "notes": "Classificação para a final"
+}
+```
+
 ##### 📍 Operações Gerais
 
 ```http
-# Atualizar jogo (requer auth - apenas criador)
-PUT /api/games/1
-Authorization: Bearer <token>
-{
-  "gameName": "Nome Atualizado",
-  "gameDate": "2024-12-16T15:00:00",
-  "venue": "Novo Local",
-  "description": "Descrição atualizada"
-}
-
 # Deletar jogo (requer auth - apenas criador)
 DELETE /api/games/1
 Authorization: Bearer <token>
 
 # Atualizar placar (requer auth - apenas criador)
 PATCH /api/games/1/score?homeGoals=2&awayGoals=1
+Authorization: Bearer <token>
+
+# Atualizar jogo (DEPRECATED - use endpoints específicos acima)
+PUT /api/games/1
 Authorization: Bearer <token>
 ```
 
