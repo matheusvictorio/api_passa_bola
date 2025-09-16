@@ -60,27 +60,48 @@ public class UserContextService {
     
     /**
      * Gets the ID and type of the currently authenticated user
-     * @return Array with [userId, userType] or throws exception if not found
+     * @return UserIdAndType object with userId and userType
      */
-    public Object[] getCurrentUserIdAndType() {
+    public UserIdAndType getCurrentUserIdAndType() {
         String email = getCurrentUserDetails().getUsername(); // getUsername() returns email in our system
         
         Player player = playerRepository.findByEmail(email).orElse(null);
         if (player != null) {
-            return new Object[]{player.getId(), UserType.PLAYER};
+            return new UserIdAndType(player.getId(), UserType.PLAYER);
         }
         
         Organization organization = organizationRepository.findByEmail(email).orElse(null);
         if (organization != null) {
-            return new Object[]{organization.getId(), UserType.ORGANIZATION};
+            return new UserIdAndType(organization.getId(), UserType.ORGANIZATION);
         }
         
         Spectator spectator = spectatorRepository.findByEmail(email).orElse(null);
         if (spectator != null) {
-            return new Object[]{spectator.getId(), UserType.SPECTATOR};
+            return new UserIdAndType(spectator.getId(), UserType.SPECTATOR);
         }
         
         throw new RuntimeException("User not found: " + email);
+    }
+    
+    /**
+     * Inner class to hold user ID and type information
+     */
+    public static class UserIdAndType {
+        private final Long userId;
+        private final UserType userType;
+        
+        public UserIdAndType(Long userId, UserType userType) {
+            this.userId = userId;
+            this.userType = userType;
+        }
+        
+        public Long getUserId() {
+            return userId;
+        }
+        
+        public UserType getUserType() {
+            return userType;
+        }
     }
     
     /**
@@ -88,8 +109,8 @@ public class UserContextService {
      * @return Current user's ID
      */
     public Long getCurrentUserId() {
-        Object[] userInfo = getCurrentUserIdAndType();
-        return (Long) userInfo[0];
+        UserIdAndType userInfo = getCurrentUserIdAndType();
+        return userInfo.getUserId();
     }
     
     /**
@@ -97,8 +118,8 @@ public class UserContextService {
      * @return Current user's type
      */
     public UserType getCurrentUserType() {
-        Object[] userInfo = getCurrentUserIdAndType();
-        return (UserType) userInfo[1];
+        UserIdAndType userInfo = getCurrentUserIdAndType();
+        return userInfo.getUserType();
     }
     
     /**
