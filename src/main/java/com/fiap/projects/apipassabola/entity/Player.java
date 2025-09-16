@@ -101,6 +101,32 @@ public class Player implements UserDetails {
     )
     private Set<Organization> favoriteOrganizations = new HashSet<>();
     
+    // Cross-type followers: Spectators following this Player
+    @ManyToMany(mappedBy = "followingPlayers")
+    private Set<Spectator> spectatorFollowers = new HashSet<>();
+    
+    // Cross-type following: Player following Spectators
+    @ManyToMany
+    @JoinTable(
+        name = "player_following_spectators",
+        joinColumns = @JoinColumn(name = "player_id"),
+        inverseJoinColumns = @JoinColumn(name = "spectator_id")
+    )
+    private Set<Spectator> followingSpectators = new HashSet<>();
+    
+    // Cross-type following: Player following Organizations (beyond favorites)
+    @ManyToMany
+    @JoinTable(
+        name = "player_following_organizations",
+        joinColumns = @JoinColumn(name = "player_id"),
+        inverseJoinColumns = @JoinColumn(name = "organization_id")
+    )
+    private Set<Organization> followingOrganizations = new HashSet<>();
+    
+    // Cross-type followers: Organizations following this Player
+    @ManyToMany(mappedBy = "followingPlayers")
+    private Set<Organization> organizationFollowers = new HashSet<>();
+    
     // Games where this player's organization participates
     // Note: This is a derived relationship, not stored directly
     @Transient

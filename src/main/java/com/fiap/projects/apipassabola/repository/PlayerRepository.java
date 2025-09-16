@@ -50,4 +50,24 @@ public interface PlayerRepository extends JpaRepository<Player, Long> {
     
     @Query("SELECT p FROM Player p JOIN p.teams t WHERE t = :team")
     List<Player> findByTeamsContaining(@Param("team") Team team);
+    
+    // Cross-type following queries for Player
+    @Query("SELECT s FROM Player p JOIN p.followingSpectators s WHERE p.id = :playerId")
+    Page<com.fiap.projects.apipassabola.entity.Spectator> findFollowingSpectatorsByPlayerId(@Param("playerId") Long playerId, Pageable pageable);
+    
+    @Query("SELECT o FROM Player p JOIN p.followingOrganizations o WHERE p.id = :playerId")
+    Page<com.fiap.projects.apipassabola.entity.Organization> findFollowingOrganizationsByPlayerId(@Param("playerId") Long playerId, Pageable pageable);
+    
+    @Query("SELECT CASE WHEN COUNT(s) > 0 THEN true ELSE false END FROM Player p JOIN p.followingSpectators s WHERE p.id = :playerId AND s.id = :spectatorId")
+    boolean isFollowingSpectator(@Param("playerId") Long playerId, @Param("spectatorId") Long spectatorId);
+    
+    @Query("SELECT CASE WHEN COUNT(o) > 0 THEN true ELSE false END FROM Player p JOIN p.followingOrganizations o WHERE p.id = :playerId AND o.id = :organizationId")
+    boolean isFollowingOrganization(@Param("playerId") Long playerId, @Param("organizationId") Long organizationId);
+    
+    // Cross-type followers queries for Player
+    @Query("SELECT s FROM Player p JOIN p.spectatorFollowers s WHERE p.id = :playerId")
+    Page<com.fiap.projects.apipassabola.entity.Spectator> findSpectatorFollowersByPlayerId(@Param("playerId") Long playerId, Pageable pageable);
+    
+    @Query("SELECT o FROM Player p JOIN p.organizationFollowers o WHERE p.id = :playerId")
+    Page<com.fiap.projects.apipassabola.entity.Organization> findOrganizationFollowersByPlayerId(@Param("playerId") Long playerId, Pageable pageable);
 }

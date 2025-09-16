@@ -1,5 +1,7 @@
 package com.fiap.projects.apipassabola.repository;
 
+import com.fiap.projects.apipassabola.entity.Organization;
+import com.fiap.projects.apipassabola.entity.Player;
 import com.fiap.projects.apipassabola.entity.Spectator;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,5 +24,29 @@ public interface SpectatorRepository extends JpaRepository<Spectator, Long> {
     
     @Query("SELECT s FROM Spectator s WHERE s.favoriteTeam.id = :teamId")
     Page<Spectator> findByFavoriteTeamId(@Param("teamId") Long teamId, Pageable pageable);
+    
+    // Following/Followers queries - Spectator to Spectator
+    @Query("SELECT s.followers FROM Spectator s WHERE s.id = :spectatorId")
+    Page<Spectator> findFollowersBySpectatorId(@Param("spectatorId") Long spectatorId, Pageable pageable);
+    
+    @Query("SELECT s.following FROM Spectator s WHERE s.id = :spectatorId")
+    Page<Spectator> findFollowingBySpectatorId(@Param("spectatorId") Long spectatorId, Pageable pageable);
+    
+    @Query("SELECT CASE WHEN COUNT(f) > 0 THEN true ELSE false END FROM Spectator s JOIN s.following f WHERE s.id = :followerId AND f.id = :followedId")
+    boolean isFollowing(@Param("followerId") Long followerId, @Param("followedId") Long followedId);
+    
+    // Cross-type following queries - Spectator following Players
+    @Query("SELECT s.followingPlayers FROM Spectator s WHERE s.id = :spectatorId")
+    Page<Player> findFollowingPlayersBySpectatorId(@Param("spectatorId") Long spectatorId, Pageable pageable);
+    
+    @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END FROM Spectator s JOIN s.followingPlayers p WHERE s.id = :spectatorId AND p.id = :playerId")
+    boolean isFollowingPlayer(@Param("spectatorId") Long spectatorId, @Param("playerId") Long playerId);
+    
+    // Cross-type following queries - Spectator following Organizations
+    @Query("SELECT s.followingOrganizations FROM Spectator s WHERE s.id = :spectatorId")
+    Page<Organization> findFollowingOrganizationsBySpectatorId(@Param("spectatorId") Long spectatorId, Pageable pageable);
+    
+    @Query("SELECT CASE WHEN COUNT(o) > 0 THEN true ELSE false END FROM Spectator s JOIN s.followingOrganizations o WHERE s.id = :spectatorId AND o.id = :organizationId")
+    boolean isFollowingOrganization(@Param("spectatorId") Long spectatorId, @Param("organizationId") Long organizationId);
     
 }
