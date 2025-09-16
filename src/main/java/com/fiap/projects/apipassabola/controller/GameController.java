@@ -4,6 +4,9 @@ import com.fiap.projects.apipassabola.dto.request.GameRequest;
 import com.fiap.projects.apipassabola.dto.request.FriendlyGameRequest;
 import com.fiap.projects.apipassabola.dto.request.ChampionshipGameRequest;
 import com.fiap.projects.apipassabola.dto.request.CupGameRequest;
+import com.fiap.projects.apipassabola.dto.request.FriendlyGameUpdateRequest;
+import com.fiap.projects.apipassabola.dto.request.ChampionshipGameUpdateRequest;
+import com.fiap.projects.apipassabola.dto.request.CupGameUpdateRequest;
 import com.fiap.projects.apipassabola.dto.response.GameResponse;
 import com.fiap.projects.apipassabola.entity.Game;
 import com.fiap.projects.apipassabola.entity.GameType;
@@ -113,6 +116,36 @@ public class GameController {
         return ResponseEntity.ok(createdGame);
     }
     
+    // Specific update endpoints for each game type
+    
+    @PutMapping("/friendly/{id}")
+    @PreAuthorize("hasRole('PLAYER')")
+    public ResponseEntity<GameResponse> updateFriendlyGame(
+            @PathVariable Long id,
+            @Valid @RequestBody FriendlyGameUpdateRequest request) {
+        GameResponse updatedGame = gameService.updateFriendlyGame(id, request);
+        return ResponseEntity.ok(updatedGame);
+    }
+    
+    @PutMapping("/championship/{id}")
+    @PreAuthorize("hasRole('PLAYER')")
+    public ResponseEntity<GameResponse> updateChampionshipGame(
+            @PathVariable Long id,
+            @Valid @RequestBody ChampionshipGameUpdateRequest request) {
+        GameResponse updatedGame = gameService.updateChampionshipGame(id, request);
+        return ResponseEntity.ok(updatedGame);
+    }
+    
+    @PutMapping("/cup/{id}")
+    @PreAuthorize("hasRole('ORGANIZATION')")
+    public ResponseEntity<GameResponse> updateCupGame(
+            @PathVariable Long id,
+            @Valid @RequestBody CupGameUpdateRequest request) {
+        GameResponse updatedGame = gameService.updateCupGame(id, request);
+        return ResponseEntity.ok(updatedGame);
+    }
+    
+    @Deprecated
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ORGANIZATION') or hasRole('PLAYER')")
     public ResponseEntity<GameResponse> updateGame(
