@@ -592,11 +592,11 @@ Authorization: Bearer <token>
 ##### 🎯 Permissões por Tipo de Usuário
 
 | Ação | PLAYER | ORGANIZATION |
-|------|--------|--------------|
-| Criar Amistoso | ✅ | ❌ |
-| Criar Campeonato | ✅ | ❌ |
+|------|--------|-----------|
+| Criar Amistoso | ✅ | ✅ |
+| Criar Campeonato | ✅ | ✅ |
 | Criar Copa | ❌ | ✅ |
-| Participar de Amistoso/Campeonato | ✅ | ❌ |
+| Participar de Amistoso/Campeonato | ✅ | ✅ |
 | Enviar Convites para Copa | ❌ | ✅ |
 | Aceitar/Rejeitar Convites | ❌ | ✅ (apenas do próprio time) |
 
