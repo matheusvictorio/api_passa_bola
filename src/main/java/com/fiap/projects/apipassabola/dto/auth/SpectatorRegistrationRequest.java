@@ -29,7 +29,7 @@ public class SpectatorRegistrationRequest {
     
     @NotBlank(message = "Last name is required")
     private String lastName;
-    
+
     private String bio;
     
     @Past(message = "Birth date must be in the past")

@@ -135,15 +135,61 @@ public class FollowService {
     public Page<FollowResponse> getFollowing(Long userId, UserType userType, Pageable pageable) {
         switch (userType) {
             case PLAYER:
-                // Para Player, vamos retornar spectators que ele segue (método disponível)
+                // Para Player, buscar todos os tipos que ele segue
+                // Vamos tentar buscar cada tipo e retornar o primeiro que tem conteúdo
+                // Mas agora de forma mais robusta
+                
+                // 1. Buscar players que ele segue
+                Page<Player> followingPlayers = playerRepository.findFollowingByPlayerId(userId, pageable);
+                if (followingPlayers.hasContent()) {
+                    return followingPlayers.map(this::convertPlayerToFollowResponse);
+                }
+                
+                // 2. Buscar organizações que ele segue
+                Page<Organization> followingOrgs = playerRepository.findFollowingOrganizationsByPlayerId(userId, pageable);
+                if (followingOrgs.hasContent()) {
+                    return followingOrgs.map(this::convertOrganizationToFollowResponse);
+                }
+                
+                // 3. Buscar spectators que ele segue
                 Page<Spectator> followingSpectators = playerRepository.findFollowingSpectatorsByPlayerId(userId, pageable);
                 return followingSpectators.map(this::convertSpectatorToFollowResponse);
                 
             case ORGANIZATION:
+                // Para Organization, buscar todos os tipos que ela segue
+                
+                // 1. Buscar players que ela segue
                 Page<Player> followingPlayersOrg = organizationRepository.findFollowingPlayersByOrganizationId(userId, pageable);
-                return followingPlayersOrg.map(this::convertPlayerToFollowResponse);
+                if (followingPlayersOrg.hasContent()) {
+                    return followingPlayersOrg.map(this::convertPlayerToFollowResponse);
+                }
+                
+                // 2. Buscar spectators que ela segue
+                Page<Spectator> followingSpectatorsOrg = organizationRepository.findFollowingSpectatorsByOrganizationId(userId, pageable);
+                if (followingSpectatorsOrg.hasContent()) {
+                    return followingSpectatorsOrg.map(this::convertSpectatorToFollowResponse);
+                }
+                
+                // 3. Buscar outras organizações que ela segue
+                Page<Organization> followingOrganizations = organizationRepository.findFollowingOrganizationsByOrganizationId(userId, pageable);
+                return followingOrganizations.map(this::convertOrganizationToFollowResponse);
                 
             case SPECTATOR:
+                // Para Spectator, buscar todos os tipos que ele segue
+                
+                // 1. Buscar players que ele segue
+                Page<Player> followingPlayersSpec = spectatorRepository.findFollowingPlayersBySpectatorId(userId, pageable);
+                if (followingPlayersSpec.hasContent()) {
+                    return followingPlayersSpec.map(this::convertPlayerToFollowResponse);
+                }
+                
+                // 2. Buscar organizações que ele segue
+                Page<Organization> followingOrgsSpec = spectatorRepository.findFollowingOrganizationsBySpectatorId(userId, pageable);
+                if (followingOrgsSpec.hasContent()) {
+                    return followingOrgsSpec.map(this::convertOrganizationToFollowResponse);
+                }
+                
+                // 3. Buscar outros spectators que ele segue
                 Page<Spectator> followingSpectatorsSpec = spectatorRepository.findFollowingBySpectatorId(userId, pageable);
                 return followingSpectatorsSpec.map(this::convertSpectatorToFollowResponse);
                 

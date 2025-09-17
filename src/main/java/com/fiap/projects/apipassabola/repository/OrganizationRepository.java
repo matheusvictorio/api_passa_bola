@@ -53,6 +53,10 @@ public interface OrganizationRepository extends JpaRepository<Organization, Long
     @Query("SELECT o FROM Organization org JOIN org.following o WHERE org.id = :organizationId")
     Page<Organization> findFollowingByOrganizationId(@Param("organizationId") Long organizationId, Pageable pageable);
     
+    // Alias method for consistency with the service layer
+    @Query("SELECT o FROM Organization org JOIN org.following o WHERE org.id = :organizationId")
+    Page<Organization> findFollowingOrganizationsByOrganizationId(@Param("organizationId") Long organizationId, Pageable pageable);
+    
     @Query("SELECT CASE WHEN COUNT(o) > 0 THEN true ELSE false END FROM Organization org JOIN org.following o WHERE org.id = :followerId AND o.id = :followedId")
     boolean isFollowingOrganization(@Param("followerId") Long followerId, @Param("followedId") Long followedId);
     

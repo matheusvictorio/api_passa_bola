@@ -64,6 +64,10 @@ public interface PlayerRepository extends JpaRepository<Player, Long> {
     @Query("SELECT CASE WHEN COUNT(o) > 0 THEN true ELSE false END FROM Player p JOIN p.followingOrganizations o WHERE p.id = :playerId AND o.id = :organizationId")
     boolean isFollowingOrganization(@Param("playerId") Long playerId, @Param("organizationId") Long organizationId);
     
+    // Player-to-Player following query (missing method)
+    @Query("SELECT f FROM Player p JOIN p.following f WHERE p.id = :playerId")
+    Page<Player> findFollowingByPlayerId(@Param("playerId") Long playerId, Pageable pageable);
+    
     // Cross-type followers queries for Player
     @Query("SELECT s FROM Player p JOIN p.spectatorFollowers s WHERE p.id = :playerId")
     Page<com.fiap.projects.apipassabola.entity.Spectator> findSpectatorFollowersByPlayerId(@Param("playerId") Long playerId, Pageable pageable);
