@@ -57,7 +57,7 @@ public class GameParticipantController {
     }
     
     @GetMapping("/my-participations")
-    @PreAuthorize("hasRole('PLAYER')")
+    @PreAuthorize("hasRole('PLAYER') or hasRole('ORGANIZATION')")
     public ResponseEntity<Page<GameParticipantResponse>> getMyParticipations(
             @PageableDefault(size = 20) Pageable pageable) {
         Page<GameParticipantResponse> participations = gameParticipantService.getMyParticipations(pageable);

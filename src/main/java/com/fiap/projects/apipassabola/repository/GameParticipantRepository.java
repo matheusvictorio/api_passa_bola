@@ -32,6 +32,9 @@ public interface GameParticipantRepository extends JpaRepository<GameParticipant
     List<GameParticipant> findByPlayerId(Long playerId);
     Page<GameParticipant> findByPlayerId(Long playerId, Pageable pageable);
     
+    // Find participants by multiple player IDs
+    Page<GameParticipant> findByPlayerIdIn(List<Long> playerIds, Pageable pageable);
+    
     // Find participants by game and team side
     List<GameParticipant> findByGameIdAndTeamSide(Long gameId, Integer teamSide);
     

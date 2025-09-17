@@ -25,6 +25,9 @@ public interface PlayerRepository extends JpaRepository<Player, Long> {
     @Query("SELECT p FROM Player p WHERE p.organization.id = :organizationId")
     Page<Player> findByOrganizationId(@Param("organizationId") Long organizationId, Pageable pageable);
     
+    @Query("SELECT p FROM Player p WHERE p.organization.id = :organizationId")
+    List<Player> findByOrganizationId(@Param("organizationId") Long organizationId);
+    
     
     @Query("SELECT COUNT(f) FROM Player p JOIN p.followers f WHERE p.id = :playerId")
     Long countFollowersByPlayerId(@Param("playerId") Long playerId);
