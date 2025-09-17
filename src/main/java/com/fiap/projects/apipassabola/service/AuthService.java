@@ -163,12 +163,14 @@ public class AuthService {
         Spectator spectator = new Spectator();
         spectator.setUserType(UserType.SPECTATOR);
         spectator.setUsername(request.getUsername());
-        spectator.setName(request.getFirstName() + " " + request.getLastName());
+        spectator.setName(request.getName());
         spectator.setEmail(request.getEmail());
         spectator.setPassword(passwordEncoder.encode(request.getPassword()));
         spectator.setBio(request.getBio());
         spectator.setBirthDate(request.getBirthDate());
+        spectator.setPhone(request.getPhone());
         spectator.setProfilePhotoUrl(request.getProfilePhotoUrl());
+        spectator.setBannerUrl(request.getBannerUrl());
         
         if (request.getFavoriteTeamId() != null) {
             Organization favoriteTeam = organizationRepository.findById(request.getFavoriteTeamId())

@@ -15,6 +15,7 @@ import com.fiap.projects.apipassabola.repository.GameRepository;
 import com.fiap.projects.apipassabola.repository.PlayerRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -179,7 +180,42 @@ public class GameParticipantService {
     
     public Page<GameParticipantResponse> getMyParticipations(Pageable pageable) {
         UserContextService.UserIdAndType currentUser = userContextService.getCurrentUserIdAndType();
-        return getPlayerParticipations(currentUser.getUserId(), pageable);
+        
+        // Verificar o tipo de usuário
+        switch (currentUser.getUserType()) {
+            case PLAYER:
+                // Para jogadoras, buscar suas participações normalmente
+                return getPlayerParticipations(currentUser.getUserId(), pageable);
+                
+            case ORGANIZATION:
+                // Para organizações, buscar jogos onde os times das suas jogadoras estão participando
+                return getOrganizationTeamsParticipations(currentUser.getUserId(), pageable);
+                
+            case SPECTATOR:
+                // Spectators não participam de jogos como GameParticipant
+                return Page.empty(pageable);
+                
+            default:
+                throw new BusinessException("Invalid user type for game participations: " + currentUser.getUserType());
+        }
+    }
+    
+    private Page<GameParticipantResponse> getOrganizationTeamsParticipations(Long organizationId, Pageable pageable) {
+        // Buscar todas as jogadoras que pertencem a esta organização
+        List<Player> organizationPlayers = playerRepository.findByOrganizationId(organizationId);
+        
+        if (organizationPlayers.isEmpty()) {
+            return Page.empty(pageable);
+        }
+        
+        // Extrair IDs das jogadoras
+        List<Long> playerIds = organizationPlayers.stream()
+                .map(Player::getId)
+                .collect(Collectors.toList());
+        
+        // Buscar participações de todas essas jogadoras
+        return gameParticipantRepository.findByPlayerIdIn(playerIds, pageable)
+                .map(this::convertToResponse);
     }
     
     public Page<GameParticipantResponse> getParticipationsByTeam(Long teamId, Pageable pageable) {
