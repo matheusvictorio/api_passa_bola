@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,6 +21,16 @@ import java.util.Set;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(exclude = {
+    "followers",
+    "following",
+    "followingPlayers",
+    "followingOrganizations",
+    "playerFollowers",
+    "organizationFollowers",
+    "subscribedGames",
+    "posts"
+})
 public class Spectator implements UserDetails {
     
     @Id
