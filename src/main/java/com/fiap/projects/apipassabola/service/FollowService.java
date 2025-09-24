@@ -14,6 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -76,7 +79,23 @@ public class FollowService {
                         return followerPlayer != null && targetPlayer != null && 
                                followerPlayer.getFollowing().contains(targetPlayer);
                     case ORGANIZATION:
-                        return playerRepository.isFollowingOrganization(followerId, targetId);
+                        // Check both followingOrganizations (correct) and favoriteOrganizations (legacy)
+                        // for backward compatibility with potentially inconsistent data
+                        Player player = playerRepository.findById(followerId).orElse(null);
+                        Organization org = organizationRepository.findById(targetId).orElse(null);
+                        
+                        if (player != null && org != null) {
+                            // First check the correct relationship
+                            boolean isFollowing = playerRepository.isFollowingOrganization(followerId, targetId);
+                            
+                            // If not found in followingOrganizations, check favoriteOrganizations for legacy data
+                            if (!isFollowing && player.getFavoriteOrganizations() != null) {
+                                isFollowing = player.getFavoriteOrganizations().contains(org);
+                            }
+                            
+                            return isFollowing;
+                        }
+                        return false;
                     case SPECTATOR:
                         return playerRepository.isFollowingSpectator(followerId, targetId);
                 }
@@ -198,7 +217,7 @@ public class FollowService {
         }
     }
     
-    private boolean userExists(Long userId, UserType userType) {
+    public boolean userExists(Long userId, UserType userType) {
         switch (userType) {
             case PLAYER:
                 return playerRepository.existsById(userId);
@@ -229,7 +248,7 @@ public class FollowService {
                     case ORGANIZATION:
                         Organization targetOrg = organizationRepository.findById(targetId)
                             .orElseThrow(() -> new RuntimeException("Target organization not found"));
-                        followerPlayer.getFavoriteOrganizations().add(targetOrg);
+                        followerPlayer.getFollowingOrganizations().add(targetOrg);
                         targetOrg.getPlayerFollowers().add(followerPlayer);
                         playerRepository.save(followerPlayer);
                         organizationRepository.save(targetOrg);
@@ -283,28 +302,58 @@ public class FollowService {
                 
                 switch (targetType) {
                     case PLAYER:
-                        Player targetPlayer = playerRepository.findById(targetId)
-                            .orElseThrow(() -> new RuntimeException("Target player not found"));
-                        followerSpectator.getFollowingPlayers().add(targetPlayer);
-                        targetPlayer.getSpectatorFollowers().add(followerSpectator);
-                        spectatorRepository.save(followerSpectator);
-                        playerRepository.save(targetPlayer);
+                        try {
+                            Player targetPlayer = playerRepository.findById(targetId)
+                                .orElseThrow(() -> new RuntimeException("Target player not found"));
+                            
+                            // Check if the relationship already exists to prevent duplicates
+                            if (followerSpectator.getFollowingPlayers().contains(targetPlayer)) {
+                                throw new RuntimeException("Already following this player");
+                            }
+                            
+                            followerSpectator.getFollowingPlayers().add(targetPlayer);
+                            targetPlayer.getSpectatorFollowers().add(followerSpectator);
+                            spectatorRepository.save(followerSpectator);
+                            playerRepository.save(targetPlayer);
+                        } catch (Exception e) {
+                            throw new RuntimeException("Failed to follow player: " + e.getMessage(), e);
+                        }
                         break;
                     case ORGANIZATION:
-                        Organization targetOrg = organizationRepository.findById(targetId)
-                            .orElseThrow(() -> new RuntimeException("Target organization not found"));
-                        followerSpectator.getFollowingOrganizations().add(targetOrg);
-                        targetOrg.getSpectatorFollowers().add(followerSpectator);
-                        spectatorRepository.save(followerSpectator);
-                        organizationRepository.save(targetOrg);
+                        try {
+                            Organization targetOrg = organizationRepository.findById(targetId)
+                                .orElseThrow(() -> new RuntimeException("Target organization not found"));
+                            
+                            // Check if the relationship already exists to prevent duplicates
+                            if (followerSpectator.getFollowingOrganizations().contains(targetOrg)) {
+                                throw new RuntimeException("Already following this organization");
+                            }
+                            
+                            followerSpectator.getFollowingOrganizations().add(targetOrg);
+                            targetOrg.getSpectatorFollowers().add(followerSpectator);
+                            spectatorRepository.save(followerSpectator);
+                            organizationRepository.save(targetOrg);
+                        } catch (Exception e) {
+                            throw new RuntimeException("Failed to follow organization: " + e.getMessage(), e);
+                        }
                         break;
                     case SPECTATOR:
-                        Spectator targetSpectator = spectatorRepository.findById(targetId)
-                            .orElseThrow(() -> new RuntimeException("Target spectator not found"));
-                        followerSpectator.getFollowing().add(targetSpectator);
-                        targetSpectator.getFollowers().add(followerSpectator);
-                        spectatorRepository.save(followerSpectator);
-                        spectatorRepository.save(targetSpectator);
+                        try {
+                            Spectator targetSpectator = spectatorRepository.findById(targetId)
+                                .orElseThrow(() -> new RuntimeException("Target spectator not found"));
+                            
+                            // Check if the relationship already exists to prevent duplicates
+                            if (followerSpectator.getFollowing().contains(targetSpectator)) {
+                                throw new RuntimeException("Already following this spectator");
+                            }
+                            
+                            followerSpectator.getFollowing().add(targetSpectator);
+                            targetSpectator.getFollowers().add(followerSpectator);
+                            spectatorRepository.save(followerSpectator);
+                            spectatorRepository.save(targetSpectator);
+                        } catch (Exception e) {
+                            throw new RuntimeException("Failed to follow spectator: " + e.getMessage(), e);
+                        }
                         break;
                 }
                 break;
@@ -329,7 +378,7 @@ public class FollowService {
                     case ORGANIZATION:
                         Organization targetOrg = organizationRepository.findById(targetId)
                             .orElseThrow(() -> new RuntimeException("Target organization not found"));
-                        followerPlayer.getFavoriteOrganizations().remove(targetOrg);
+                        followerPlayer.getFollowingOrganizations().remove(targetOrg);
                         targetOrg.getPlayerFollowers().remove(followerPlayer);
                         playerRepository.save(followerPlayer);
                         organizationRepository.save(targetOrg);
@@ -409,6 +458,44 @@ public class FollowService {
                 }
                 break;
         }
+    }
+    
+    /**
+     * Migrates data from favoriteOrganizations to followingOrganizations for all players.
+     * This method is useful for ensuring backward compatibility with legacy data.
+     * It should be called once during application startup or as a maintenance task.
+     */
+    @Transactional
+    public void migratePlayerFavoriteOrganizationsToFollowing() {
+        List<Player> allPlayers = playerRepository.findAll();
+        int migratedCount = 0;
+        
+        for (Player player : allPlayers) {
+            if (player.getFavoriteOrganizations() != null && !player.getFavoriteOrganizations().isEmpty()) {
+                Set<Organization> favorites = new HashSet<>(player.getFavoriteOrganizations());
+                
+                for (Organization org : favorites) {
+                    // Check if the organization is already in the following list
+                    if (!player.getFollowingOrganizations().contains(org)) {
+                        // Add to followingOrganizations
+                        player.getFollowingOrganizations().add(org);
+                        
+                        // Add player to organization's followers if not already there
+                        if (!org.getPlayerFollowers().contains(player)) {
+                            org.getPlayerFollowers().add(player);
+                            organizationRepository.save(org);
+                        }
+                        
+                        migratedCount++;
+                    }
+                }
+                
+                // Save the player with updated relationships
+                playerRepository.save(player);
+            }
+        }
+        
+        System.out.println("Migration completed: " + migratedCount + " favorite organizations migrated to following relationships");
     }
     
     private FollowResponse convertPlayerToFollowResponse(Player player) {
