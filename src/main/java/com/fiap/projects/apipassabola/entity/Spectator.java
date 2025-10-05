@@ -37,6 +37,10 @@ public class Spectator implements UserDetails {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
+    // Global unique user ID across all user types
+    @Column(name = "user_id", unique = true, nullable = false)
+    private Long userId;
+    
     // User fields flattened
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

@@ -100,7 +100,8 @@ public class OrganizationService {
     
     private OrganizationResponse convertToResponse(Organization organization) {
         OrganizationResponse response = new OrganizationResponse();
-        response.setId(organization.getId());
+        response.setId(organization.getId());  // Entity ID (sequential)
+        response.setUserId(organization.getUserId());  // Global unique user ID
         response.setUserType(organization.getUserType());
         response.setUsername(organization.getRealUsername()); // Use getRealUsername() to get actual username, not email
         response.setName(organization.getName());
@@ -123,7 +124,7 @@ public class OrganizationService {
     
     public OrganizationSummaryResponse convertToSummaryResponse(Organization organization) {
         OrganizationSummaryResponse response = new OrganizationSummaryResponse();
-        response.setId(organization.getId());
+        response.setId(organization.getId());  // Keep entity ID for summary
         response.setName(organization.getName());
         response.setLogoUrl(organization.getProfilePhotoUrl()); // Using profilePhotoUrl as logoUrl
         response.setCity(organization.getCity());

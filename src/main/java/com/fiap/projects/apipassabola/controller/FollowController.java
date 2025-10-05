@@ -50,10 +50,14 @@ public class FollowController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Boolean> isFollowing(@Valid @RequestBody FollowRequest request) {
         UserContextService.UserIdAndType currentUser = userContextService.getCurrentUserIdAndType();
+        
+        // Buscar entity ID do target pelo userId
+        Long targetEntityId = followService.getEntityIdByUserId(request.getTargetUserId(), request.getTargetUserType());
+        
         boolean isFollowing = followService.isFollowing(
             currentUser.getUserId(), 
             currentUser.getUserType(), 
-            request.getTargetUserId(), 
+            targetEntityId, 
             request.getTargetUserType()
         );
         return ResponseEntity.ok(isFollowing);
@@ -61,6 +65,7 @@ public class FollowController {
     
     /**
      * Listar seguidores de qualquer usuário (público)
+     * @param userId - O userId GLOBAL do usuário
      */
     @GetMapping("/followers/{userId}/{userType}")
     public ResponseEntity<Page<FollowResponse>> getFollowers(
@@ -71,16 +76,20 @@ public class FollowController {
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir) {
         
+        // Converter userId global para entity ID
+        Long entityId = followService.getEntityIdByUserId(userId, userType);
+        
         Sort sort = sortDir.equalsIgnoreCase("desc") ? 
             Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
         Pageable pageable = PageRequest.of(page, size, sort);
         
-        Page<FollowResponse> followers = followService.getFollowers(userId, userType, pageable);
+        Page<FollowResponse> followers = followService.getFollowers(entityId, userType, pageable);
         return ResponseEntity.ok(followers);
     }
     
     /**
      * Listar quem um usuário está seguindo (público)
+     * @param userId - O userId GLOBAL do usuário
      */
     @GetMapping("/following/{userId}/{userType}")
     public ResponseEntity<Page<FollowResponse>> getFollowing(
@@ -91,11 +100,14 @@ public class FollowController {
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir) {
         
+        // Converter userId global para entity ID
+        Long entityId = followService.getEntityIdByUserId(userId, userType);
+        
         Sort sort = sortDir.equalsIgnoreCase("desc") ? 
             Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
         Pageable pageable = PageRequest.of(page, size, sort);
         
-        Page<FollowResponse> following = followService.getFollowing(userId, userType, pageable);
+        Page<FollowResponse> following = followService.getFollowing(entityId, userType, pageable);
         return ResponseEntity.ok(following);
     }
     
