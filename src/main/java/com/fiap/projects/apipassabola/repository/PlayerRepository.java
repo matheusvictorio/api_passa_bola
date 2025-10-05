@@ -15,6 +15,10 @@ import java.util.Optional;
 @Repository
 public interface PlayerRepository extends JpaRepository<Player, Long> {
     
+    boolean existsByUserId(Long userId);
+    
+    Optional<Player> findByUserId(Long userId);
+    
     Optional<Player> findByUsername(String username);
     
     Optional<Player> findByEmail(String email);

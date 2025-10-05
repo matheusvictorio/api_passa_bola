@@ -90,7 +90,8 @@ public class SpectatorService {
     
     private SpectatorResponse convertToResponse(Spectator spectator) {
         SpectatorResponse response = new SpectatorResponse();
-        response.setId(spectator.getId());
+        response.setId(spectator.getId());  // Entity ID (sequential)
+        response.setUserId(spectator.getUserId());  // Global unique user ID
         response.setUserType(spectator.getUserType());
         response.setUsername(spectator.getRealUsername()); // Use getRealUsername() to get actual username, not email
         response.setName(spectator.getName());
@@ -106,9 +107,9 @@ public class SpectatorService {
         response.setUpdatedAt(spectator.getUpdatedAt());
         
         if (spectator.getFavoriteTeam() != null) {
-            response.setFavoriteTeamId(spectator.getFavoriteTeam().getId());
+            response.setFavoriteTeamId(spectator.getFavoriteTeam().getId());  // Keep entity ID
             OrganizationSummaryResponse favoriteTeamResponse = new OrganizationSummaryResponse();
-            favoriteTeamResponse.setId(spectator.getFavoriteTeam().getId());
+            favoriteTeamResponse.setId(spectator.getFavoriteTeam().getId());  // Keep entity ID
             favoriteTeamResponse.setName(spectator.getFavoriteTeam().getName());
             response.setFavoriteTeam(favoriteTeamResponse);
         }

@@ -15,6 +15,10 @@ import java.util.Optional;
 @Repository
 public interface SpectatorRepository extends JpaRepository<Spectator, Long> {
     
+    boolean existsByUserId(Long userId);
+    
+    Optional<Spectator> findByUserId(Long userId);
+    
     Optional<Spectator> findByUsername(String username);
     
     Optional<Spectator> findByEmail(String email);

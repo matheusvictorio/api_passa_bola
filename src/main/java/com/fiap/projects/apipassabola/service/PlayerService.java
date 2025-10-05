@@ -98,7 +98,8 @@ public class PlayerService {
     
     private PlayerResponse convertToResponse(Player player) {
         PlayerResponse response = new PlayerResponse();
-        response.setId(player.getId());
+        response.setId(player.getId());  // Entity ID (sequential)
+        response.setUserId(player.getUserId());  // Global unique user ID
         response.setUserType(player.getUserType());
         response.setUsername(player.getRealUsername()); // Use getRealUsername() to get actual username, not email
         response.setName(player.getName());
@@ -117,7 +118,7 @@ public class PlayerService {
         
         if (player.getOrganization() != null) {
             OrganizationSummaryResponse orgResponse = new OrganizationSummaryResponse();
-            orgResponse.setId(player.getOrganization().getId());
+            orgResponse.setId(player.getOrganization().getId());  // Keep entity ID
             orgResponse.setName(player.getOrganization().getName());
             response.setOrganization(orgResponse);
         }
@@ -127,7 +128,7 @@ public class PlayerService {
     
     public PlayerSummaryResponse convertToSummaryResponse(Player player) {
         PlayerSummaryResponse response = new PlayerSummaryResponse();
-        response.setId(player.getId());
+        response.setId(player.getId());  // Keep entity ID for summary
         response.setUsername(player.getRealUsername()); // Use getRealUsername() to get actual username, not email
         response.setName(player.getName());
         response.setProfilePhotoUrl(player.getProfilePhotoUrl());

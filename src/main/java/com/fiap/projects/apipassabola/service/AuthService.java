@@ -30,6 +30,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
+    private final UserIdGeneratorService userIdGeneratorService;
     
     public AuthResponse login(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
@@ -47,10 +48,11 @@ public class AuthService {
             Player player = playerOpt.get();
             Map<String, Object> extraClaims = new HashMap<>();
             extraClaims.put("role", player.getUserType().name());
-            extraClaims.put("userId", player.getId());
+            extraClaims.put("userId", player.getUserId());  // Use userId global
+            extraClaims.put("playerId", player.getId());  // Keep entity ID for backward compatibility
             
             String token = jwtUtil.generateToken(player, extraClaims);
-            return new AuthResponse(token, player.getId(), player.getRealUsername(), player.getEmail(), 
+            return new AuthResponse(token, player.getUserId(), player.getRealUsername(), player.getEmail(), 
                     User.Role.valueOf(player.getUserType().name()), player.getId());
         }
         
@@ -59,10 +61,11 @@ public class AuthService {
             Organization organization = organizationOpt.get();
             Map<String, Object> extraClaims = new HashMap<>();
             extraClaims.put("role", organization.getUserType().name());
-            extraClaims.put("userId", organization.getId());
+            extraClaims.put("userId", organization.getUserId());  // Use userId global
+            extraClaims.put("organizationId", organization.getId());  // Keep entity ID for backward compatibility
             
             String token = jwtUtil.generateToken(organization, extraClaims);
-            return new AuthResponse(token, organization.getId(), organization.getRealUsername(), organization.getEmail(), 
+            return new AuthResponse(token, organization.getUserId(), organization.getRealUsername(), organization.getEmail(), 
                     User.Role.valueOf(organization.getUserType().name()), organization.getId());
         }
         
@@ -71,10 +74,11 @@ public class AuthService {
             Spectator spectator = spectatorOpt.get();
             Map<String, Object> extraClaims = new HashMap<>();
             extraClaims.put("role", spectator.getUserType().name());
-            extraClaims.put("userId", spectator.getId());
+            extraClaims.put("userId", spectator.getUserId());  // Use userId global
+            extraClaims.put("spectatorId", spectator.getId());  // Keep entity ID for backward compatibility
             
             String token = jwtUtil.generateToken(spectator, extraClaims);
-            return new AuthResponse(token, spectator.getId(), spectator.getRealUsername(), spectator.getEmail(), 
+            return new AuthResponse(token, spectator.getUserId(), spectator.getRealUsername(), spectator.getEmail(), 
                     User.Role.valueOf(spectator.getUserType().name()), spectator.getId());
         }
         
@@ -86,6 +90,7 @@ public class AuthService {
         
         // Create Player with flattened structure
         Player player = new Player();
+        player.setUserId(userIdGeneratorService.generateUniqueUserId());
         player.setUserType(UserType.PLAYER);
         player.setUsername(request.getUsername());
         player.setName(request.getName());
@@ -108,12 +113,12 @@ public class AuthService {
         
         Map<String, Object> extraClaims = new HashMap<>();
         extraClaims.put("role", player.getUserType().name());
-        extraClaims.put("userId", player.getId());
-        extraClaims.put("playerId", player.getId());
+        extraClaims.put("userId", player.getUserId());  // Use userId global
+        extraClaims.put("playerId", player.getId());  // Keep entity ID for backward compatibility
         
         String token = jwtUtil.generateToken(player, extraClaims);
         
-        return new AuthResponse(token, player.getId(), player.getRealUsername(), player.getEmail(), 
+        return new AuthResponse(token, player.getUserId(), player.getRealUsername(), player.getEmail(), 
                 User.Role.valueOf(player.getUserType().name()), player.getId());
     }
     
@@ -128,6 +133,7 @@ public class AuthService {
         
         // Create Organization with flattened structure
         Organization organization = new Organization();
+        organization.setUserId(userIdGeneratorService.generateUniqueUserId());
         organization.setUserType(UserType.ORGANIZATION);
         organization.setUsername(request.getUsername());
         organization.setName(request.getName());
@@ -147,12 +153,12 @@ public class AuthService {
         
         Map<String, Object> extraClaims = new HashMap<>();
         extraClaims.put("role", organization.getUserType().name());
-        extraClaims.put("userId", organization.getId());
-        extraClaims.put("organizationId", organization.getId());
+        extraClaims.put("userId", organization.getUserId());  // Use userId global
+        extraClaims.put("organizationId", organization.getId());  // Keep entity ID for backward compatibility
         
         String token = jwtUtil.generateToken(organization, extraClaims);
         
-        return new AuthResponse(token, organization.getId(), organization.getUsername(), organization.getEmail(), 
+        return new AuthResponse(token, organization.getUserId(), organization.getRealUsername(), organization.getEmail(), 
                 User.Role.valueOf(organization.getUserType().name()), organization.getId());
     }
     
@@ -161,6 +167,7 @@ public class AuthService {
         
         // Create Spectator with flattened structure
         Spectator spectator = new Spectator();
+        spectator.setUserId(userIdGeneratorService.generateUniqueUserId());
         spectator.setUserType(UserType.SPECTATOR);
         spectator.setUsername(request.getUsername());
         spectator.setName(request.getName());
@@ -182,12 +189,12 @@ public class AuthService {
         
         Map<String, Object> extraClaims = new HashMap<>();
         extraClaims.put("role", spectator.getUserType().name());
-        extraClaims.put("userId", spectator.getId());
-        extraClaims.put("spectatorId", spectator.getId());
+        extraClaims.put("userId", spectator.getUserId());  // Use userId global
+        extraClaims.put("spectatorId", spectator.getId());  // Keep entity ID for backward compatibility
         
         String token = jwtUtil.generateToken(spectator, extraClaims);
         
-        return new AuthResponse(token, spectator.getId(), spectator.getRealUsername(), spectator.getEmail(), 
+        return new AuthResponse(token, spectator.getUserId(), spectator.getRealUsername(), spectator.getEmail(), 
                 User.Role.SPECTATOR, spectator.getId());
     }
     

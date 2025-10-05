@@ -14,7 +14,8 @@ import java.util.Set;
 @AllArgsConstructor
 public class SpectatorResponse {
     
-    private Long id;
+    private Long id;  // Entity ID (sequential)
+    private Long userId;  // Global unique user ID
     private UserType userType;
     private String username;
     private String name;

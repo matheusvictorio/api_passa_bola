@@ -13,6 +13,10 @@ import java.util.Optional;
 @Repository
 public interface OrganizationRepository extends JpaRepository<Organization, Long> {
     
+    boolean existsByUserId(Long userId);
+    
+    Optional<Organization> findByUserId(Long userId);
+    
     Optional<Organization> findByUsername(String username);
     
     Optional<Organization> findByEmail(String email);
