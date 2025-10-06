@@ -53,4 +53,12 @@ public interface SpectatorRepository extends JpaRepository<Spectator, Long> {
     @Query("SELECT CASE WHEN COUNT(o) > 0 THEN true ELSE false END FROM Spectator s JOIN s.followingOrganizations o WHERE s.id = :spectatorId AND o.id = :organizationId")
     boolean isFollowingOrganization(@Param("spectatorId") Long spectatorId, @Param("organizationId") Long organizationId);
     
+    // Cross-type followers queries - Players following Spectator
+    @Query("SELECT s.playerFollowers FROM Spectator s WHERE s.id = :spectatorId")
+    Page<Player> findPlayerFollowersBySpectatorId(@Param("spectatorId") Long spectatorId, Pageable pageable);
+    
+    // Cross-type followers queries - Organizations following Spectator
+    @Query("SELECT s.organizationFollowers FROM Spectator s WHERE s.id = :spectatorId")
+    Page<Organization> findOrganizationFollowersBySpectatorId(@Param("spectatorId") Long spectatorId, Pageable pageable);
+    
 }

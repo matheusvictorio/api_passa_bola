@@ -140,19 +140,48 @@ public class FollowService {
     public Page<FollowResponse> getFollowers(Long userId, UserType userType, Pageable pageable) {
         switch (userType) {
             case PLAYER:
-                // Buscar todos os tipos que seguem este player
+                // Buscar todos os tipos que seguem este player e combinar
+                // Prioridade: Players -> Organizations -> Spectators
                 Page<Player> playerFollowers = playerRepository.findFollowersByPlayerId(userId, pageable);
-                Page<Organization> orgFollowers = playerRepository.findOrganizationFollowersByPlayerId(userId, pageable);
-                Page<Spectator> spectatorFollowers = playerRepository.findSpectatorFollowersByPlayerId(userId, pageable);
+                if (playerFollowers.hasContent()) {
+                    return playerFollowers.map(this::convertPlayerToFollowResponse);
+                }
                 
-                // Combinar e converter para FollowResponse
-                return playerFollowers.map(this::convertPlayerToFollowResponse);
+                Page<Organization> orgFollowers = playerRepository.findOrganizationFollowersByPlayerId(userId, pageable);
+                if (orgFollowers.hasContent()) {
+                    return orgFollowers.map(this::convertOrganizationToFollowResponse);
+                }
+                
+                Page<Spectator> spectatorFollowers = playerRepository.findSpectatorFollowersByPlayerId(userId, pageable);
+                return spectatorFollowers.map(this::convertSpectatorToFollowResponse);
                 
             case ORGANIZATION:
+                // Buscar todos os tipos que seguem esta organization
                 Page<Player> playerFollowersOrg = organizationRepository.findPlayerFollowersByOrganizationId(userId, pageable);
-                return playerFollowersOrg.map(this::convertPlayerToFollowResponse);
+                if (playerFollowersOrg.hasContent()) {
+                    return playerFollowersOrg.map(this::convertPlayerToFollowResponse);
+                }
+                
+                Page<Organization> orgFollowersOrg = organizationRepository.findOrganizationFollowersByOrganizationId(userId, pageable);
+                if (orgFollowersOrg.hasContent()) {
+                    return orgFollowersOrg.map(this::convertOrganizationToFollowResponse);
+                }
+                
+                Page<Spectator> spectatorFollowersOrg = organizationRepository.findSpectatorFollowersByOrganizationId(userId, pageable);
+                return spectatorFollowersOrg.map(this::convertSpectatorToFollowResponse);
                 
             case SPECTATOR:
+                // Buscar todos os tipos que seguem este spectator
+                Page<Player> playerFollowersSpec = spectatorRepository.findPlayerFollowersBySpectatorId(userId, pageable);
+                if (playerFollowersSpec.hasContent()) {
+                    return playerFollowersSpec.map(this::convertPlayerToFollowResponse);
+                }
+                
+                Page<Organization> orgFollowersSpec = spectatorRepository.findOrganizationFollowersBySpectatorId(userId, pageable);
+                if (orgFollowersSpec.hasContent()) {
+                    return orgFollowersSpec.map(this::convertOrganizationToFollowResponse);
+                }
+                
                 Page<Spectator> spectatorFollowersSpec = spectatorRepository.findFollowersBySpectatorId(userId, pageable);
                 return spectatorFollowersSpec.map(this::convertSpectatorToFollowResponse);
                 
