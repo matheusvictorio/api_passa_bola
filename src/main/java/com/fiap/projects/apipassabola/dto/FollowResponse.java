@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 @Data
 public class FollowResponse {
     
-    private String id;
+    private Long id;
     private String userId;  // Global unique user ID
     private String username;
     private String name;
