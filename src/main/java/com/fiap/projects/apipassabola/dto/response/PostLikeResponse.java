@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 public class PostLikeResponse {
     
     private Long id;
-    private Long userId;
+    private String userId;  // Global unique user ID
     private String userUsername;
     private String userName;
     private UserType userType;

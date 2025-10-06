@@ -11,7 +11,7 @@ import lombok.AllArgsConstructor;
 public class AuthResponse {
     
     private String token;
-    private Long userId;
+    private String userId;  // Global unique user ID
     private String username;
     private String email;
     private User.Role role;

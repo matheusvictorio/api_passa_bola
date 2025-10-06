@@ -183,7 +183,7 @@ public class PostLikeService {
     private PostLikeResponse convertToResponse(PostLike postLike) {
         return new PostLikeResponse(
             postLike.getId(),
-            postLike.getUserId(),
+            String.valueOf(postLike.getUserId()),  // Convert Long to String
             postLike.getUserUsername(),
             postLike.getUserName(),
             postLike.getUserType(),

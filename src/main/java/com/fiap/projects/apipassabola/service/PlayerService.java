@@ -99,7 +99,7 @@ public class PlayerService {
     private PlayerResponse convertToResponse(Player player) {
         PlayerResponse response = new PlayerResponse();
         response.setId(player.getId());  // Entity ID (sequential)
-        response.setUserId(player.getUserId());  // Global unique user ID
+        response.setUserId(String.valueOf(player.getUserId()));  // Convert Long to String
         response.setUserType(player.getUserType());
         response.setUsername(player.getRealUsername()); // Use getRealUsername() to get actual username, not email
         response.setName(player.getName());

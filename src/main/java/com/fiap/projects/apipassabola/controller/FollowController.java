@@ -51,8 +51,9 @@ public class FollowController {
     public ResponseEntity<Boolean> isFollowing(@Valid @RequestBody FollowRequest request) {
         UserContextService.UserIdAndType currentUser = userContextService.getCurrentUserIdAndType();
         
-        // Buscar entity ID do target pelo userId
-        Long targetEntityId = followService.getEntityIdByUserId(request.getTargetUserId(), request.getTargetUserType());
+        // Converter String userId para Long e buscar entity ID
+        Long targetUserId = Long.parseLong(request.getTargetUserId());
+        Long targetEntityId = followService.getEntityIdByUserId(targetUserId, request.getTargetUserType());
         
         boolean isFollowing = followService.isFollowing(
             currentUser.getUserId(), 
@@ -69,15 +70,16 @@ public class FollowController {
      */
     @GetMapping("/followers/{userId}/{userType}")
     public ResponseEntity<Page<FollowResponse>> getFollowers(
-            @PathVariable Long userId,
+            @PathVariable String userId,
             @PathVariable UserType userType,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir) {
         
-        // Converter userId global para entity ID
-        Long entityId = followService.getEntityIdByUserId(userId, userType);
+        // Converter String userId para Long e depois para entity ID
+        Long userIdLong = Long.parseLong(userId);
+        Long entityId = followService.getEntityIdByUserId(userIdLong, userType);
         
         Sort sort = sortDir.equalsIgnoreCase("desc") ? 
             Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
@@ -93,15 +95,16 @@ public class FollowController {
      */
     @GetMapping("/following/{userId}/{userType}")
     public ResponseEntity<Page<FollowResponse>> getFollowing(
-            @PathVariable Long userId,
+            @PathVariable String userId,
             @PathVariable UserType userType,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir) {
         
-        // Converter userId global para entity ID
-        Long entityId = followService.getEntityIdByUserId(userId, userType);
+        // Converter String userId para Long e depois para entity ID
+        Long userIdLong = Long.parseLong(userId);
+        Long entityId = followService.getEntityIdByUserId(userIdLong, userType);
         
         Sort sort = sortDir.equalsIgnoreCase("desc") ? 
             Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();

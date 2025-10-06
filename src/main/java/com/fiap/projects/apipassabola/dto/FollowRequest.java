@@ -8,7 +8,7 @@ import lombok.Data;
 public class FollowRequest {
     
     @NotNull(message = "Target user ID is required")
-    private Long targetUserId;
+    private String targetUserId;
     
     @NotNull(message = "Target user type is required")
     private UserType targetUserType;
