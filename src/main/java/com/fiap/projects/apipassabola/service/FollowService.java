@@ -531,7 +531,7 @@ public class FollowService {
     
     private FollowResponse convertPlayerToFollowResponse(Player player) {
         FollowResponse response = new FollowResponse();
-        response.setId(String.valueOf(player.getUserId()));  // Convert Long to String
+        response.setId(player.getId());  // Convert Long to String
         response.setUserId(String.valueOf(player.getUserId()));
         response.setUsername(player.getRealUsername());
         response.setName(player.getName());
@@ -556,7 +556,7 @@ public class FollowService {
     
     private FollowResponse convertOrganizationToFollowResponse(Organization organization) {
         FollowResponse response = new FollowResponse();
-        response.setId(String.valueOf(organization.getUserId()));  // Convert Long to String
+        response.setId(organization.getId());  // Convert Long to String
         response.setUserId(String.valueOf(organization.getUserId()));
         response.setUsername(organization.getRealUsername());
         response.setName(organization.getName());
@@ -578,7 +578,7 @@ public class FollowService {
     
     private FollowResponse convertSpectatorToFollowResponse(Spectator spectator) {
         FollowResponse response = new FollowResponse();
-        response.setId(String.valueOf(spectator.getUserId()));  // Convert Long to String
+        response.setId(spectator.getId());  // Convert Long to String
         response.setUserId(String.valueOf(spectator.getUserId()));
         response.setUsername(spectator.getRealUsername());
         response.setName(spectator.getName());
