@@ -8,11 +8,15 @@ import com.fiap.projects.apipassabola.repository.PlayerRepository;
 import com.fiap.projects.apipassabola.repository.SpectatorRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -138,122 +142,101 @@ public class FollowService {
     }
     
     public Page<FollowResponse> getFollowers(Long userId, UserType userType, Pageable pageable) {
+        List<FollowResponse> allFollowers = new ArrayList<>();
+        
         switch (userType) {
             case PLAYER:
-                // Buscar todos os tipos que seguem este player e combinar
-                // Prioridade: Players -> Organizations -> Spectators
-                Page<Player> playerFollowers = playerRepository.findFollowersByPlayerId(userId, pageable);
-                if (playerFollowers.hasContent()) {
-                    return playerFollowers.map(this::convertPlayerToFollowResponse);
-                }
+                // Buscar TODOS os tipos que seguem este player e combinar
+                List<Player> playerFollowers = playerRepository.findFollowersByPlayerId(userId, Pageable.unpaged()).getContent();
+                List<Organization> orgFollowers = playerRepository.findOrganizationFollowersByPlayerId(userId, Pageable.unpaged()).getContent();
+                List<Spectator> spectatorFollowers = playerRepository.findSpectatorFollowersByPlayerId(userId, Pageable.unpaged()).getContent();
                 
-                Page<Organization> orgFollowers = playerRepository.findOrganizationFollowersByPlayerId(userId, pageable);
-                if (orgFollowers.hasContent()) {
-                    return orgFollowers.map(this::convertOrganizationToFollowResponse);
-                }
-                
-                Page<Spectator> spectatorFollowers = playerRepository.findSpectatorFollowersByPlayerId(userId, pageable);
-                return spectatorFollowers.map(this::convertSpectatorToFollowResponse);
+                allFollowers.addAll(playerFollowers.stream().map(this::convertPlayerToFollowResponse).collect(Collectors.toList()));
+                allFollowers.addAll(orgFollowers.stream().map(this::convertOrganizationToFollowResponse).collect(Collectors.toList()));
+                allFollowers.addAll(spectatorFollowers.stream().map(this::convertSpectatorToFollowResponse).collect(Collectors.toList()));
+                break;
                 
             case ORGANIZATION:
-                // Buscar todos os tipos que seguem esta organization
-                Page<Player> playerFollowersOrg = organizationRepository.findPlayerFollowersByOrganizationId(userId, pageable);
-                if (playerFollowersOrg.hasContent()) {
-                    return playerFollowersOrg.map(this::convertPlayerToFollowResponse);
-                }
+                // Buscar TODOS os tipos que seguem esta organization e combinar
+                List<Player> playerFollowersOrg = organizationRepository.findPlayerFollowersByOrganizationId(userId, Pageable.unpaged()).getContent();
+                List<Organization> orgFollowersOrg = organizationRepository.findOrganizationFollowersByOrganizationId(userId, Pageable.unpaged()).getContent();
+                List<Spectator> spectatorFollowersOrg = organizationRepository.findSpectatorFollowersByOrganizationId(userId, Pageable.unpaged()).getContent();
                 
-                Page<Organization> orgFollowersOrg = organizationRepository.findOrganizationFollowersByOrganizationId(userId, pageable);
-                if (orgFollowersOrg.hasContent()) {
-                    return orgFollowersOrg.map(this::convertOrganizationToFollowResponse);
-                }
-                
-                Page<Spectator> spectatorFollowersOrg = organizationRepository.findSpectatorFollowersByOrganizationId(userId, pageable);
-                return spectatorFollowersOrg.map(this::convertSpectatorToFollowResponse);
+                allFollowers.addAll(playerFollowersOrg.stream().map(this::convertPlayerToFollowResponse).collect(Collectors.toList()));
+                allFollowers.addAll(orgFollowersOrg.stream().map(this::convertOrganizationToFollowResponse).collect(Collectors.toList()));
+                allFollowers.addAll(spectatorFollowersOrg.stream().map(this::convertSpectatorToFollowResponse).collect(Collectors.toList()));
+                break;
                 
             case SPECTATOR:
-                // Buscar todos os tipos que seguem este spectator
-                Page<Player> playerFollowersSpec = spectatorRepository.findPlayerFollowersBySpectatorId(userId, pageable);
-                if (playerFollowersSpec.hasContent()) {
-                    return playerFollowersSpec.map(this::convertPlayerToFollowResponse);
-                }
+                // Buscar TODOS os tipos que seguem este spectator e combinar
+                List<Player> playerFollowersSpec = spectatorRepository.findPlayerFollowersBySpectatorId(userId, Pageable.unpaged()).getContent();
+                List<Organization> orgFollowersSpec = spectatorRepository.findOrganizationFollowersBySpectatorId(userId, Pageable.unpaged()).getContent();
+                List<Spectator> spectatorFollowersSpec = spectatorRepository.findFollowersBySpectatorId(userId, Pageable.unpaged()).getContent();
                 
-                Page<Organization> orgFollowersSpec = spectatorRepository.findOrganizationFollowersBySpectatorId(userId, pageable);
-                if (orgFollowersSpec.hasContent()) {
-                    return orgFollowersSpec.map(this::convertOrganizationToFollowResponse);
-                }
-                
-                Page<Spectator> spectatorFollowersSpec = spectatorRepository.findFollowersBySpectatorId(userId, pageable);
-                return spectatorFollowersSpec.map(this::convertSpectatorToFollowResponse);
+                allFollowers.addAll(playerFollowersSpec.stream().map(this::convertPlayerToFollowResponse).collect(Collectors.toList()));
+                allFollowers.addAll(orgFollowersSpec.stream().map(this::convertOrganizationToFollowResponse).collect(Collectors.toList()));
+                allFollowers.addAll(spectatorFollowersSpec.stream().map(this::convertSpectatorToFollowResponse).collect(Collectors.toList()));
+                break;
                 
             default:
                 throw new RuntimeException("Invalid user type");
         }
+        
+        // Aplicar paginação manualmente
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), allFollowers.size());
+        List<FollowResponse> pageContent = allFollowers.subList(start, end);
+        
+        return new PageImpl<>(pageContent, pageable, allFollowers.size());
     }
     
     public Page<FollowResponse> getFollowing(Long userId, UserType userType, Pageable pageable) {
+        List<FollowResponse> allFollowing = new ArrayList<>();
+        
         switch (userType) {
             case PLAYER:
-                // Para Player, buscar todos os tipos que ele segue
-                // Vamos tentar buscar cada tipo e retornar o primeiro que tem conteúdo
-                // Mas agora de forma mais robusta
+                // Buscar TODOS os tipos que este player segue e combinar
+                List<Player> followingPlayers = playerRepository.findFollowingByPlayerId(userId, Pageable.unpaged()).getContent();
+                List<Organization> followingOrgs = playerRepository.findFollowingOrganizationsByPlayerId(userId, Pageable.unpaged()).getContent();
+                List<Spectator> followingSpectators = playerRepository.findFollowingSpectatorsByPlayerId(userId, Pageable.unpaged()).getContent();
                 
-                // 1. Buscar players que ele segue
-                Page<Player> followingPlayers = playerRepository.findFollowingByPlayerId(userId, pageable);
-                if (followingPlayers.hasContent()) {
-                    return followingPlayers.map(this::convertPlayerToFollowResponse);
-                }
-                
-                // 2. Buscar organizações que ele segue
-                Page<Organization> followingOrgs = playerRepository.findFollowingOrganizationsByPlayerId(userId, pageable);
-                if (followingOrgs.hasContent()) {
-                    return followingOrgs.map(this::convertOrganizationToFollowResponse);
-                }
-                
-                // 3. Buscar spectators que ele segue
-                Page<Spectator> followingSpectators = playerRepository.findFollowingSpectatorsByPlayerId(userId, pageable);
-                return followingSpectators.map(this::convertSpectatorToFollowResponse);
+                allFollowing.addAll(followingPlayers.stream().map(this::convertPlayerToFollowResponse).collect(Collectors.toList()));
+                allFollowing.addAll(followingOrgs.stream().map(this::convertOrganizationToFollowResponse).collect(Collectors.toList()));
+                allFollowing.addAll(followingSpectators.stream().map(this::convertSpectatorToFollowResponse).collect(Collectors.toList()));
+                break;
                 
             case ORGANIZATION:
-                // Para Organization, buscar todos os tipos que ela segue
+                // Buscar TODOS os tipos que esta organization segue e combinar
+                List<Player> followingPlayersOrg = organizationRepository.findFollowingPlayersByOrganizationId(userId, Pageable.unpaged()).getContent();
+                List<Spectator> followingSpectatorsOrg = organizationRepository.findFollowingSpectatorsByOrganizationId(userId, Pageable.unpaged()).getContent();
+                List<Organization> followingOrganizations = organizationRepository.findFollowingOrganizationsByOrganizationId(userId, Pageable.unpaged()).getContent();
                 
-                // 1. Buscar players que ela segue
-                Page<Player> followingPlayersOrg = organizationRepository.findFollowingPlayersByOrganizationId(userId, pageable);
-                if (followingPlayersOrg.hasContent()) {
-                    return followingPlayersOrg.map(this::convertPlayerToFollowResponse);
-                }
-                
-                // 2. Buscar spectators que ela segue
-                Page<Spectator> followingSpectatorsOrg = organizationRepository.findFollowingSpectatorsByOrganizationId(userId, pageable);
-                if (followingSpectatorsOrg.hasContent()) {
-                    return followingSpectatorsOrg.map(this::convertSpectatorToFollowResponse);
-                }
-                
-                // 3. Buscar outras organizações que ela segue
-                Page<Organization> followingOrganizations = organizationRepository.findFollowingOrganizationsByOrganizationId(userId, pageable);
-                return followingOrganizations.map(this::convertOrganizationToFollowResponse);
+                allFollowing.addAll(followingPlayersOrg.stream().map(this::convertPlayerToFollowResponse).collect(Collectors.toList()));
+                allFollowing.addAll(followingSpectatorsOrg.stream().map(this::convertSpectatorToFollowResponse).collect(Collectors.toList()));
+                allFollowing.addAll(followingOrganizations.stream().map(this::convertOrganizationToFollowResponse).collect(Collectors.toList()));
+                break;
                 
             case SPECTATOR:
-                // Para Spectator, buscar todos os tipos que ele segue
+                // Buscar TODOS os tipos que este spectator segue e combinar
+                List<Player> followingPlayersSpec = spectatorRepository.findFollowingPlayersBySpectatorId(userId, Pageable.unpaged()).getContent();
+                List<Organization> followingOrgsSpec = spectatorRepository.findFollowingOrganizationsBySpectatorId(userId, Pageable.unpaged()).getContent();
+                List<Spectator> followingSpectatorsSpec = spectatorRepository.findFollowingBySpectatorId(userId, Pageable.unpaged()).getContent();
                 
-                // 1. Buscar players que ele segue
-                Page<Player> followingPlayersSpec = spectatorRepository.findFollowingPlayersBySpectatorId(userId, pageable);
-                if (followingPlayersSpec.hasContent()) {
-                    return followingPlayersSpec.map(this::convertPlayerToFollowResponse);
-                }
-                
-                // 2. Buscar organizações que ele segue
-                Page<Organization> followingOrgsSpec = spectatorRepository.findFollowingOrganizationsBySpectatorId(userId, pageable);
-                if (followingOrgsSpec.hasContent()) {
-                    return followingOrgsSpec.map(this::convertOrganizationToFollowResponse);
-                }
-                
-                // 3. Buscar outros spectators que ele segue
-                Page<Spectator> followingSpectatorsSpec = spectatorRepository.findFollowingBySpectatorId(userId, pageable);
-                return followingSpectatorsSpec.map(this::convertSpectatorToFollowResponse);
+                allFollowing.addAll(followingPlayersSpec.stream().map(this::convertPlayerToFollowResponse).collect(Collectors.toList()));
+                allFollowing.addAll(followingOrgsSpec.stream().map(this::convertOrganizationToFollowResponse).collect(Collectors.toList()));
+                allFollowing.addAll(followingSpectatorsSpec.stream().map(this::convertSpectatorToFollowResponse).collect(Collectors.toList()));
+                break;
                 
             default:
                 throw new RuntimeException("Invalid user type");
         }
+        
+        // Aplicar paginação manualmente
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), allFollowing.size());
+        List<FollowResponse> pageContent = allFollowing.subList(start, end);
+        
+        return new PageImpl<>(pageContent, pageable, allFollowing.size());
     }
     
     /**
