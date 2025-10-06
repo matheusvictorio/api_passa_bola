@@ -27,20 +27,23 @@ public class FollowService {
     public String followUser(FollowRequest request) {
         UserContextService.UserIdAndType currentUser = userContextService.getCurrentUserIdAndType();
         
+        // Converter String userId para Long
+        Long targetUserId = Long.parseLong(request.getTargetUserId());
+        
         // Validar se não está tentando seguir a si mesmo (comparar userId global)
         Long currentUserId = getCurrentEntityUserId(currentUser.getUserId(), currentUser.getUserType());
-        if (currentUserId.equals(request.getTargetUserId())) {
+        if (currentUserId.equals(targetUserId)) {
             throw new RuntimeException("You cannot follow yourself");
         }
         
         // Verificar se o usuário alvo existe
-        if (!userExistsByUserId(request.getTargetUserId(), request.getTargetUserType())) {
+        if (!userExistsByUserId(targetUserId, request.getTargetUserType())) {
             throw new RuntimeException("Target user not found");
         }
         
         // Buscar entity IDs para verificar se já está seguindo
         Long followerEntityId = currentUser.getUserId();
-        Long targetEntityId = getEntityIdByUserId(request.getTargetUserId(), request.getTargetUserType());
+        Long targetEntityId = getEntityIdByUserId(targetUserId, request.getTargetUserType());
         
         // Verificar se já está seguindo
         if (isFollowing(followerEntityId, currentUser.getUserType(), targetEntityId, request.getTargetUserType())) {
@@ -57,9 +60,12 @@ public class FollowService {
     public String unfollowUser(FollowRequest request) {
         UserContextService.UserIdAndType currentUser = userContextService.getCurrentUserIdAndType();
         
+        // Converter String userId para Long
+        Long targetUserId = Long.parseLong(request.getTargetUserId());
+        
         // Buscar entity IDs
         Long followerEntityId = currentUser.getUserId();
-        Long targetEntityId = getEntityIdByUserId(request.getTargetUserId(), request.getTargetUserType());
+        Long targetEntityId = getEntityIdByUserId(targetUserId, request.getTargetUserType());
         
         // Verificar se está seguindo
         if (!isFollowing(followerEntityId, currentUser.getUserType(), targetEntityId, request.getTargetUserType())) {
@@ -513,8 +519,8 @@ public class FollowService {
     
     private FollowResponse convertPlayerToFollowResponse(Player player) {
         FollowResponse response = new FollowResponse();
-        response.setId(player.getUserId());  // Use userId global instead of entity id
-        response.setUserId(player.getUserId());
+        response.setId(String.valueOf(player.getUserId()));  // Convert Long to String
+        response.setUserId(String.valueOf(player.getUserId()));
         response.setUsername(player.getRealUsername());
         response.setName(player.getName());
         response.setEmail(player.getEmail());
@@ -538,8 +544,8 @@ public class FollowService {
     
     private FollowResponse convertOrganizationToFollowResponse(Organization organization) {
         FollowResponse response = new FollowResponse();
-        response.setId(organization.getUserId());  // Use userId global instead of entity id
-        response.setUserId(organization.getUserId());
+        response.setId(String.valueOf(organization.getUserId()));  // Convert Long to String
+        response.setUserId(String.valueOf(organization.getUserId()));
         response.setUsername(organization.getRealUsername());
         response.setName(organization.getName());
         response.setEmail(organization.getEmail());
@@ -560,8 +566,8 @@ public class FollowService {
     
     private FollowResponse convertSpectatorToFollowResponse(Spectator spectator) {
         FollowResponse response = new FollowResponse();
-        response.setId(spectator.getUserId());  // Use userId global instead of entity id
-        response.setUserId(spectator.getUserId());
+        response.setId(String.valueOf(spectator.getUserId()));  // Convert Long to String
+        response.setUserId(String.valueOf(spectator.getUserId()));
         response.setUsername(spectator.getRealUsername());
         response.setName(spectator.getName());
         response.setEmail(spectator.getEmail());

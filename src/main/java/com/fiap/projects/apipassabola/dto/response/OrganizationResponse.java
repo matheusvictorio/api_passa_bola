@@ -14,7 +14,7 @@ import java.util.Set;
 public class OrganizationResponse {
     
     private Long id;  // Entity ID (sequential)
-    private Long userId;  // Global unique user ID
+    private String userId;  // Global unique user ID
     private UserType userType;
     private String username;
     private String name;

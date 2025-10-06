@@ -101,7 +101,7 @@ public class OrganizationService {
     private OrganizationResponse convertToResponse(Organization organization) {
         OrganizationResponse response = new OrganizationResponse();
         response.setId(organization.getId());  // Entity ID (sequential)
-        response.setUserId(organization.getUserId());  // Global unique user ID
+        response.setUserId(String.valueOf(organization.getUserId()));  // Convert Long to String
         response.setUserType(organization.getUserType());
         response.setUsername(organization.getRealUsername()); // Use getRealUsername() to get actual username, not email
         response.setName(organization.getName());

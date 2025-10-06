@@ -8,8 +8,8 @@ import java.time.LocalDateTime;
 @Data
 public class FollowResponse {
     
-    private Long id;
-    private Long userId;  // Global unique user ID
+    private String id;
+    private String userId;  // Global unique user ID
     private String username;
     private String name;
     private String email;

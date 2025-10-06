@@ -91,7 +91,7 @@ public class SpectatorService {
     private SpectatorResponse convertToResponse(Spectator spectator) {
         SpectatorResponse response = new SpectatorResponse();
         response.setId(spectator.getId());  // Entity ID (sequential)
-        response.setUserId(spectator.getUserId());  // Global unique user ID
+        response.setUserId(String.valueOf(spectator.getUserId()));  // Convert Long to String
         response.setUserType(spectator.getUserType());
         response.setUsername(spectator.getRealUsername()); // Use getRealUsername() to get actual username, not email
         response.setName(spectator.getName());
