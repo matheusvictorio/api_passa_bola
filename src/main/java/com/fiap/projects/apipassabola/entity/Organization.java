@@ -159,11 +159,21 @@ public class Organization implements UserDetails {
     // Helper methods
     
     public int getFollowersCount() {
-        return followers != null ? followers.size() : 0;
+        int count = 0;
+        // Count all types of followers
+        count += (followers != null ? followers.size() : 0);  // Organizations following
+        count += (playerFollowers != null ? playerFollowers.size() : 0);  // Players following
+        count += (spectatorFollowers != null ? spectatorFollowers.size() : 0);  // Spectators following
+        return count;
     }
     
     public int getFollowingCount() {
-        return following != null ? following.size() : 0;
+        int count = 0;
+        // Count all types being followed
+        count += (following != null ? following.size() : 0);  // Organizations being followed
+        count += (followingPlayers != null ? followingPlayers.size() : 0);  // Players being followed
+        count += (followingSpectators != null ? followingSpectators.size() : 0);  // Spectators being followed
+        return count;
     }
     
     // Method to get the real username field (not email)
