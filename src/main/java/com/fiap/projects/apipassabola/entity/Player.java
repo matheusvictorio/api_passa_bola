@@ -165,11 +165,21 @@ public class Player implements UserDetails {
     
     // Helper methods
     public int getFollowersCount() {
-        return followers != null ? followers.size() : 0;
+        int count = 0;
+        // Count all types of followers
+        count += (followers != null ? followers.size() : 0);  // Players following
+        count += (spectatorFollowers != null ? spectatorFollowers.size() : 0);  // Spectators following
+        count += (organizationFollowers != null ? organizationFollowers.size() : 0);  // Organizations following
+        return count;
     }
     
     public int getFollowingCount() {
-        return following != null ? following.size() : 0;
+        int count = 0;
+        // Count all types being followed
+        count += (following != null ? following.size() : 0);  // Players being followed
+        count += (followingSpectators != null ? followingSpectators.size() : 0);  // Spectators being followed
+        count += (followingOrganizations != null ? followingOrganizations.size() : 0);  // Organizations being followed
+        return count;
     }
     
     // Method to get the real username field (not email)
