@@ -60,24 +60,25 @@ public class UserContextService {
     
     /**
      * Gets the ID and type of the currently authenticated user
-     * @return UserIdAndType object with userId and userType
+     * IMPORTANT: Returns the ENTITY ID (not userId global) for internal operations
+     * @return UserIdAndType object with entity ID and userType
      */
     public UserIdAndType getCurrentUserIdAndType() {
         String email = getCurrentUserDetails().getUsername(); // getUsername() returns email in our system
         
         Player player = playerRepository.findByEmail(email).orElse(null);
         if (player != null) {
-            return new UserIdAndType(player.getId(), UserType.PLAYER);
+            return new UserIdAndType(player.getId(), UserType.PLAYER);  // Entity ID for internal operations
         }
         
         Organization organization = organizationRepository.findByEmail(email).orElse(null);
         if (organization != null) {
-            return new UserIdAndType(organization.getId(), UserType.ORGANIZATION);
+            return new UserIdAndType(organization.getId(), UserType.ORGANIZATION);  // Entity ID for internal operations
         }
         
         Spectator spectator = spectatorRepository.findByEmail(email).orElse(null);
         if (spectator != null) {
-            return new UserIdAndType(spectator.getId(), UserType.SPECTATOR);
+            return new UserIdAndType(spectator.getId(), UserType.SPECTATOR);  // Entity ID for internal operations
         }
         
         throw new RuntimeException("User not found: " + email);
