@@ -273,8 +273,9 @@ O sistema suporta **3 tipos distintos** de jogos, cada um com suas próprias reg
 
 1. **Sistema de Espectadores:**
    - `hasSpectators`: true/false
-   - Se `true`, campo `maxSpectators` é **obrigatório**
-   - `maxSpectators` deve ser **no mínimo 5**
+   - Se `true`, campo `maxSpectators` é **opcional**
+   - Se não informado, **padrão é 5** (mínimo)
+   - Se informado, `maxSpectators` deve ser **no mínimo 5**
 
 2. **Limites de Jogadoras:**
    - **Mínimo:** 6 jogadoras (3x3)
@@ -501,6 +502,99 @@ Authorization: Bearer <token_player>
 # Participações de uma jogadora específica
 GET /api/game-participants/player/{playerId}?page=0&size=20
 ```
+
+---
+
+### 👥 Sistema de Espectadores em Jogos
+
+#### **Para Jogos FRIENDLY e CHAMPIONSHIP:**
+
+Espectadores podem se inscrever para assistir jogos que aceitam público.
+
+#### **Confirmar Presença como Espectador:**
+```http
+POST /api/games/{id}/spectate
+Authorization: Bearer <token_spectator>
+```
+
+**Validações:**
+- ✅ Apenas usuários SPECTATOR podem se inscrever
+- ✅ Jogo deve ter `hasSpectators = true`
+- ✅ Apenas jogos FRIENDLY e CHAMPIONSHIP aceitam espectadores
+- ✅ Não pode exceder `maxSpectators` (mínimo 5 quando habilitado)
+- ✅ Não pode se inscrever duas vezes no mesmo jogo
+
+**Response:**
+```json
+{
+  "id": 789,
+  "gameId": 123,
+  "gameName": "Pelada do Sábado",
+  "spectatorId": 45,
+  "spectatorUsername": "joao_torcedor",
+  "spectatorName": "João Santos",
+  "status": "CONFIRMED",
+  "joinedAt": "2025-10-07T14:30:00",
+  "createdAt": "2025-10-07T14:30:00"
+}
+```
+
+#### **Cancelar Presença:**
+```http
+DELETE /api/games/{id}/spectate
+Authorization: Bearer <token_spectator>
+```
+
+#### **Ver Espectadores de um Jogo:**
+```http
+# Lista de espectadores confirmados (público)
+GET /api/games/{id}/spectators
+
+# Contagem de espectadores
+GET /api/games/{id}/spectators/count
+
+# Verificar se estou inscrito
+GET /api/games/{id}/spectators/is-subscribed
+Authorization: Bearer <token_spectator>
+```
+
+#### **Meus Jogos Inscritos:**
+```http
+GET /api/games/spectators/my-subscriptions?page=0&size=20
+Authorization: Bearer <token_spectator>
+```
+
+**Response:**
+```json
+{
+  "content": [
+    {
+      "id": 789,
+      "gameId": 123,
+      "gameName": "Pelada do Sábado",
+      "spectatorId": 45,
+      "spectatorUsername": "joao_torcedor",
+      "spectatorName": "João Santos",
+      "status": "CONFIRMED",
+      "joinedAt": "2025-10-07T14:30:00"
+    }
+  ],
+  "totalElements": 5,
+  "totalPages": 1
+}
+```
+
+#### **Regras de Negócio:**
+
+| Regra | Descrição |
+|-------|-----------|
+| **Tipo de Usuário** | Apenas SPECTATOR pode se inscrever como espectador |
+| **Tipo de Jogo** | Apenas FRIENDLY e CHAMPIONSHIP aceitam espectadores |
+| **Habilitação** | Jogo deve ter `hasSpectators = true` |
+| **Limite Mínimo** | Quando habilitado, mínimo de 5 espectadores |
+| **Limite Máximo** | Definido pelo criador do jogo (`maxSpectators`) |
+| **Duplicação** | Um espectador não pode se inscrever duas vezes |
+| **Contagem Automática** | `currentSpectatorCount` atualizado em tempo real |
 
 ---
 
