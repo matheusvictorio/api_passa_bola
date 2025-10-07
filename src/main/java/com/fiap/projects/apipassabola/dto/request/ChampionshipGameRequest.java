@@ -32,6 +32,9 @@ public class ChampionshipGameRequest {
     @NotNull(message = "Has spectators flag is required")
     private Boolean hasSpectators;
     
+    @Min(value = 5, message = "Maximum spectators must be at least 5 when enabled")
+    private Integer maxSpectators;
+    
     @Min(value = 6, message = "Minimum players must be at least 6 (3x3)")
     @Max(value = 22, message = "Maximum players cannot exceed 22 (11x11)")
     private Integer minPlayers = 6;

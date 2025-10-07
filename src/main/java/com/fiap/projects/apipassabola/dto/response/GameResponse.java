@@ -29,8 +29,9 @@ public class GameResponse {
     private Boolean hasSpectators;
     private Integer minPlayers;
     private Integer maxPlayers;
-    private Integer minSpectators;
+    private Integer maxSpectators;
     private Integer currentPlayerCount;
+    private Integer currentSpectatorCount;
     private Integer team1Count;
     private Integer team2Count;
     private Boolean isTeamsBalanced;

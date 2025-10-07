@@ -273,7 +273,8 @@ O sistema suporta **3 tipos distintos** de jogos, cada um com suas próprias reg
 
 1. **Sistema de Espectadores:**
    - `hasSpectators`: true/false
-   - Se `true`, mínimo de **5 espectadores** obrigatório
+   - Se `true`, campo `maxSpectators` é **obrigatório**
+   - `maxSpectators` deve ser **no mínimo 5**
 
 2. **Limites de Jogadoras:**
    - **Mínimo:** 6 jogadoras (3x3)
@@ -310,6 +311,7 @@ Content-Type: application/json
   "venue": "Campo do Parque",
   "description": "Jogo 5x5 com torcida",
   "hasSpectators": true,
+  "maxSpectators": 20,
   "minPlayers": 10,
   "maxPlayers": 22
 }
@@ -329,7 +331,8 @@ Content-Type: application/json
   "hasSpectators": true,
   "minPlayers": 10,
   "maxPlayers": 22,
-  "minSpectators": 5,
+  "maxSpectators": 20,
+  "currentSpectatorCount": 0,
   "currentPlayerCount": 0,
   "team1Count": 0,
   "team2Count": 0,
@@ -368,6 +371,7 @@ Content-Type: application/json
   "venue": "Estádio Municipal",
   "description": "Primeira fase do campeonato",
   "hasSpectators": true,
+  "maxSpectators": 50,
   "minPlayers": 22,
   "maxPlayers": 22
 }
@@ -509,7 +513,8 @@ Todos os jogos FRIENDLY e CHAMPIONSHIP retornam:
   "hasSpectators": true,
   "minPlayers": 10,
   "maxPlayers": 22,
-  "minSpectators": 5,
+  "maxSpectators": 20,
+  "currentSpectatorCount": 0,
   "currentPlayerCount": 8,
   "team1Count": 4,
   "team2Count": 4,
@@ -520,10 +525,11 @@ Todos os jogos FRIENDLY e CHAMPIONSHIP retornam:
 
 | Campo | Descrição |
 |-------|-----------|
-| `hasSpectators` | Se o jogo permite/requer espectadores |
+| `hasSpectators` | Se o jogo permite espectadores |
 | `minPlayers` | Mínimo de jogadoras para começar |
 | `maxPlayers` | Máximo de jogadoras permitido |
-| `minSpectators` | Mínimo de espectadores (5 se habilitado) |
+| `maxSpectators` | Máximo de espectadores permitido (mínimo 5 se habilitado) |
+| `currentSpectatorCount` | Total de espectadores confirmados |
 | `currentPlayerCount` | Total de jogadoras (team1 + team2) |
 | `team1Count` | Jogadoras no Time 1 |
 | `team2Count` | Jogadoras no Time 2 |
@@ -1185,7 +1191,8 @@ curl -X POST http://localhost:8080/api/games/friendly \
     "gameDate": "2025-10-15T14:00:00",
     "venue": "Campo do Parque",
     "description": "Jogo 5x5",
-    "hasSpectators": false,
+    "hasSpectators": true,
+    "maxSpectators": 15,
     "minPlayers": 10,
     "maxPlayers": 22
   }'
