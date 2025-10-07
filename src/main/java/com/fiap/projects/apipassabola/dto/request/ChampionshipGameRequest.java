@@ -33,7 +33,7 @@ public class ChampionshipGameRequest {
     private Boolean hasSpectators;
     
     @Min(value = 5, message = "Maximum spectators must be at least 5 when enabled")
-    private Integer maxSpectators;
+    private Integer maxSpectators; // Optional: defaults to 5 if hasSpectators is true
     
     @Min(value = 6, message = "Minimum players must be at least 6 (3x3)")
     @Max(value = 22, message = "Maximum players cannot exceed 22 (11x11)")

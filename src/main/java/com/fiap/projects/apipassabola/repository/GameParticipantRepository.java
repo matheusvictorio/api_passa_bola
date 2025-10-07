@@ -3,6 +3,7 @@ package com.fiap.projects.apipassabola.repository;
 import com.fiap.projects.apipassabola.entity.GameParticipant;
 import com.fiap.projects.apipassabola.entity.Game;
 import com.fiap.projects.apipassabola.entity.Player;
+import com.fiap.projects.apipassabola.entity.Spectator;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
