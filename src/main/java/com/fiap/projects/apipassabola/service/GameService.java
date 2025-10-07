@@ -82,17 +82,43 @@ public class GameService {
             throw new BusinessException("Only players can create friendly games");
         }
         
+        // Get player from database to extract username and validate existence
         Player player = playerRepository.findById(currentUser.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("Player", "id", currentUser.getUserId()));
+        
+        // Validate player limits
+        if (request.getMinPlayers() != null && request.getMaxPlayers() != null) {
+            if (request.getMinPlayers() > request.getMaxPlayers()) {
+                throw new BusinessException("Minimum players cannot be greater than maximum players");
+            }
+            if (request.getMinPlayers() % 2 != 0) {
+                throw new BusinessException("Minimum players must be an even number for balanced teams");
+            }
+            if (request.getMaxPlayers() % 2 != 0) {
+                throw new BusinessException("Maximum players must be an even number for balanced teams");
+            }
+        }
         
         Game game = new Game();
         game.setGameType(GameType.FRIENDLY);
         game.setGameName(request.getGameName());
-        game.setHostUsername(request.getHostUsername());
-        game.setHostId(request.getHostId());
+        // Automatically set host information from authenticated user
+        game.setHostUsername(player.getRealUsername());
+        game.setHostId(player.getId());
         game.setGameDate(request.getGameDate());
         game.setVenue(request.getVenue());
         game.setDescription(request.getDescription());
+        
+        // Set game configuration
+        game.setHasSpectators(request.getHasSpectators());
+        game.setMinPlayers(request.getMinPlayers() != null ? request.getMinPlayers() : 6);
+        game.setMaxPlayers(request.getMaxPlayers() != null ? request.getMaxPlayers() : 22);
+        if (request.getHasSpectators()) {
+            game.setMinSpectators(5); // Minimum 5 spectators if enabled
+        } else {
+            game.setMinSpectators(0);
+        }
+        
         game.setStatus(Game.GameStatus.SCHEDULED);
         game.setHomeGoals(0);
         game.setAwayGoals(0);
@@ -110,17 +136,43 @@ public class GameService {
             throw new BusinessException("Only players can create championship games");
         }
         
+        // Get player from database to extract username and validate existence
         Player player = playerRepository.findById(currentUser.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("Player", "id", currentUser.getUserId()));
+        
+        // Validate player limits
+        if (request.getMinPlayers() != null && request.getMaxPlayers() != null) {
+            if (request.getMinPlayers() > request.getMaxPlayers()) {
+                throw new BusinessException("Minimum players cannot be greater than maximum players");
+            }
+            if (request.getMinPlayers() % 2 != 0) {
+                throw new BusinessException("Minimum players must be an even number for balanced teams");
+            }
+            if (request.getMaxPlayers() % 2 != 0) {
+                throw new BusinessException("Maximum players must be an even number for balanced teams");
+            }
+        }
         
         Game game = new Game();
         game.setGameType(GameType.CHAMPIONSHIP);
         game.setGameName(request.getGameName());
-        game.setHostUsername(request.getHostUsername());
-        game.setHostId(request.getHostId());
+        // Automatically set host information from authenticated user
+        game.setHostUsername(player.getRealUsername());
+        game.setHostId(player.getId());
         game.setGameDate(request.getGameDate());
         game.setVenue(request.getVenue());
         game.setDescription(request.getDescription());
+        
+        // Set game configuration
+        game.setHasSpectators(request.getHasSpectators());
+        game.setMinPlayers(request.getMinPlayers() != null ? request.getMinPlayers() : 6);
+        game.setMaxPlayers(request.getMaxPlayers() != null ? request.getMaxPlayers() : 22);
+        if (request.getHasSpectators()) {
+            game.setMinSpectators(5); // Minimum 5 spectators if enabled
+        } else {
+            game.setMinSpectators(0);
+        }
+        
         game.setStatus(Game.GameStatus.SCHEDULED);
         game.setHomeGoals(0);
         game.setAwayGoals(0);
@@ -368,6 +420,27 @@ public class GameService {
             List<GameParticipantResponse> team2Players = gameParticipantService.getGameParticipantsByTeamSide(game.getId(), 2);
             response.setTeam1Players(team1Players);
             response.setTeam2Players(team2Players);
+            
+            // Set game configuration
+            response.setHasSpectators(game.getHasSpectators());
+            response.setMinPlayers(game.getMinPlayers());
+            response.setMaxPlayers(game.getMaxPlayers());
+            response.setMinSpectators(game.getMinSpectators());
+            
+            // Calculate team counts and balance
+            int team1Count = team1Players.size();
+            int team2Count = team2Players.size();
+            int totalPlayers = team1Count + team2Count;
+            
+            response.setTeam1Count(team1Count);
+            response.setTeam2Count(team2Count);
+            response.setCurrentPlayerCount(totalPlayers);
+            response.setIsTeamsBalanced(game.areTeamsBalanced(team1Count, team2Count));
+            
+            // Check if game can start (minimum players + balanced teams)
+            boolean hasMinimumPlayers = game.hasMinimumPlayers(totalPlayers);
+            boolean teamsBalanced = game.areTeamsBalanced(team1Count, team2Count);
+            response.setCanStart(hasMinimumPlayers && teamsBalanced);
         } else if (game.isCupGame()) {
             if (game.getHomeTeam() != null) {
                 response.setHomeTeam(organizationService.convertToSummaryResponse(game.getHomeTeam()));

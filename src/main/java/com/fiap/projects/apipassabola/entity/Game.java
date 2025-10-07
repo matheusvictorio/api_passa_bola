@@ -35,6 +35,19 @@ public class Game {
     @Column(columnDefinition = "TEXT")
     private String description;
     
+    // Game configuration fields
+    @Column(name = "has_spectators", nullable = false)
+    private Boolean hasSpectators = false;
+    
+    @Column(name = "min_players", nullable = false)
+    private Integer minPlayers = 6; // Minimum 3x3
+    
+    @Column(name = "max_players", nullable = false)
+    private Integer maxPlayers = 22; // Maximum 11x11
+    
+    @Column(name = "min_spectators")
+    private Integer minSpectators = 0; // 5 if hasSpectators is true
+    
     // Fields for CUP games (and backward compatibility)
     @ManyToOne
     @JoinColumn(name = "home_team_id")
@@ -152,5 +165,45 @@ public class Game {
     
     public boolean allowsIndividualParticipation() {
         return gameType == GameType.FRIENDLY || gameType == GameType.CHAMPIONSHIP;
+    }
+    
+    /**
+     * Validates if the game has the minimum required spectators
+     * @param currentSpectatorCount current number of spectators
+     * @return true if valid, false otherwise
+     */
+    public boolean hasMinimumSpectators(int currentSpectatorCount) {
+        if (!hasSpectators) {
+            return true; // No spectators required
+        }
+        return currentSpectatorCount >= (minSpectators != null ? minSpectators : 5);
+    }
+    
+    /**
+     * Validates if the game has the minimum required players
+     * @param currentPlayerCount current number of players
+     * @return true if valid, false otherwise
+     */
+    public boolean hasMinimumPlayers(int currentPlayerCount) {
+        return currentPlayerCount >= minPlayers;
+    }
+    
+    /**
+     * Validates if the game has reached maximum players
+     * @param currentPlayerCount current number of players
+     * @return true if max reached, false otherwise
+     */
+    public boolean hasReachedMaxPlayers(int currentPlayerCount) {
+        return currentPlayerCount >= maxPlayers;
+    }
+    
+    /**
+     * Validates if teams are balanced (same number of players on each side)
+     * @param team1Count number of players in team 1
+     * @param team2Count number of players in team 2
+     * @return true if balanced, false otherwise
+     */
+    public boolean areTeamsBalanced(int team1Count, int team2Count) {
+        return team1Count == team2Count;
     }
 }

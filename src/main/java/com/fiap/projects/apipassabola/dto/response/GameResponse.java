@@ -25,6 +25,17 @@ public class GameResponse {
     private List<GameParticipantResponse> team1Players;
     private List<GameParticipantResponse> team2Players;
     
+    // Game configuration
+    private Boolean hasSpectators;
+    private Integer minPlayers;
+    private Integer maxPlayers;
+    private Integer minSpectators;
+    private Integer currentPlayerCount;
+    private Integer team1Count;
+    private Integer team2Count;
+    private Boolean isTeamsBalanced;
+    private Boolean canStart; // true if minimum players reached and teams balanced
+    
     // Fields for CUP games (and backward compatibility)
     private OrganizationSummaryResponse homeTeam;
     private OrganizationSummaryResponse awayTeam;
@@ -44,4 +55,9 @@ public class GameResponse {
     private boolean isDraw;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    
+    // Helper methods for frontend
+    public boolean isReadyToStart() {
+        return canStart != null && canStart;
+    }
 }

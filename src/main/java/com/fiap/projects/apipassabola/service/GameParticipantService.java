@@ -62,6 +62,15 @@ public class GameParticipantService {
             throw new BusinessException("Team side must be 1 or 2");
         }
         
+        // Count current participants
+        long currentTotalPlayers = gameParticipantRepository.countByGameId(request.getGameId());
+        long currentTeamSidePlayers = gameParticipantRepository.countByGameIdAndTeamSide(request.getGameId(), request.getTeamSide());
+        
+        // Check if game has reached maximum players
+        if (game.hasReachedMaxPlayers((int) currentTotalPlayers)) {
+            throw new BusinessException("Game has reached maximum number of players (" + game.getMaxPlayers() + ")");
+        }
+        
         // Check if joining with team and player has a team
         if (request.getParticipationType() == GameParticipant.ParticipationType.WITH_TEAM) {
             if (player.getTeams() == null || player.getTeams().isEmpty()) {
@@ -71,8 +80,17 @@ public class GameParticipantService {
             // For now, use the first team (players can be in multiple teams)
             Team playerTeam = player.getTeams().iterator().next();
             
+            // Get all team members to validate capacity
+            List<Player> teamMembers = playerRepository.findByTeamsContaining(playerTeam);
+            int teamSize = teamMembers.size();
+            
+            // Validate that adding the entire team won't exceed maximum players
+            if (currentTotalPlayers + teamSize > game.getMaxPlayers()) {
+                throw new BusinessException("Adding team would exceed maximum players. Current: " + currentTotalPlayers + ", Team size: " + teamSize + ", Max: " + game.getMaxPlayers());
+            }
+            
             // Add all team members to the game
-            return joinWithTeam(game, player, playerTeam, request.getTeamSide());
+            return joinWithTeam(game, player, playerTeam, request.getTeamSide(), teamMembers);
         } else {
             // Join individually
             return joinIndividually(game, player, request.getTeamSide());
@@ -91,7 +109,7 @@ public class GameParticipantService {
         return convertToResponse(savedParticipant);
     }
     
-    private GameParticipantResponse joinWithTeam(Game game, Player player, Team team, Integer teamSide) {
+    private GameParticipantResponse joinWithTeam(Game game, Player player, Team team, Integer teamSide, List<Player> teamMembers) {
         // Check if any team member is already participating
         List<GameParticipant> existingParticipants = gameParticipantRepository
                 .findByGameIdAndPlayerTeamId(game.getId(), team.getId());
@@ -100,19 +118,27 @@ public class GameParticipantService {
             throw new BusinessException("Some team members are already participating in this game");
         }
         
-        // Get all team members
-        List<Player> teamMembers = playerRepository.findByTeamsContaining(team);
-        
-        // Add all team members as participants
+        // CRITICAL: All team members MUST go to the same side (teamSide parameter)
+        // Add all team members as participants on the SAME side
         for (Player teamMember : teamMembers) {
             GameParticipant participant = new GameParticipant();
             participant.setGame(game);
             participant.setPlayer(teamMember);
             participant.setParticipationType(GameParticipant.ParticipationType.WITH_TEAM);
-            participant.setTeamSide(teamSide);
+            participant.setTeamSide(teamSide); // ALL team members on the SAME side
             participant.setStatus(GameParticipant.ParticipationStatus.CONFIRMED);
             
             gameParticipantRepository.save(participant);
+        }
+        
+        // Verify teams are still balanced after adding the team
+        long team1Count = gameParticipantRepository.countByGameIdAndTeamSide(game.getId(), 1);
+        long team2Count = gameParticipantRepository.countByGameIdAndTeamSide(game.getId(), 2);
+        
+        // Log warning if teams become unbalanced (but don't block - let them balance later)
+        if (Math.abs(team1Count - team2Count) > teamMembers.size()) {
+            // Teams are significantly unbalanced
+            System.out.println("WARNING: Teams are unbalanced after adding team. Team 1: " + team1Count + ", Team 2: " + team2Count);
         }
         
         // Return the requesting player's participation
