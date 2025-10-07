@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 
 /**
  * DTO for creating CHAMPIONSHIP games
+ * hostUsername and hostId are automatically extracted from authenticated user context
  */
 @Data
 @NoArgsConstructor
@@ -17,12 +18,6 @@ public class ChampionshipGameRequest {
     
     @NotBlank(message = "Game name is required")
     private String gameName;
-    
-    @NotBlank(message = "Host username is required")
-    private String hostUsername;
-    
-    @NotNull(message = "Host ID is required")
-    private Long hostId;
     
     @NotNull(message = "Game date is required")
     @Future(message = "Game date must be in the future")
@@ -33,4 +28,15 @@ public class ChampionshipGameRequest {
     
     @Size(max = 1000, message = "Description cannot exceed 1000 characters")
     private String description;
+    
+    @NotNull(message = "Has spectators flag is required")
+    private Boolean hasSpectators;
+    
+    @Min(value = 6, message = "Minimum players must be at least 6 (3x3)")
+    @Max(value = 22, message = "Maximum players cannot exceed 22 (11x11)")
+    private Integer minPlayers = 6;
+    
+    @Min(value = 6, message = "Maximum players must be at least 6 (3x3)")
+    @Max(value = 22, message = "Maximum players cannot exceed 22 (11x11)")
+    private Integer maxPlayers = 22;
 }
