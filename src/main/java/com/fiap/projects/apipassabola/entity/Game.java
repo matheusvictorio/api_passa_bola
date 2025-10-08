@@ -50,11 +50,11 @@ public class Game {
     
     // Fields for CUP games (and backward compatibility)
     @ManyToOne
-    @JoinColumn(name = "home_team_id")
+    @JoinColumn(name = "home_team_id", nullable = true)
     private Organization homeTeam;
     
     @ManyToOne
-    @JoinColumn(name = "away_team_id")
+    @JoinColumn(name = "away_team_id", nullable = true)
     private Organization awayTeam;
     
     @Column(name = "game_date", nullable = false)
