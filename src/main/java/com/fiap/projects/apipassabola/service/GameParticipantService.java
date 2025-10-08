@@ -8,6 +8,7 @@ import com.fiap.projects.apipassabola.entity.GameParticipant;
 import com.fiap.projects.apipassabola.entity.GameType;
 import com.fiap.projects.apipassabola.entity.Player;
 import com.fiap.projects.apipassabola.entity.Team;
+import com.fiap.projects.apipassabola.entity.UserType;
 import com.fiap.projects.apipassabola.exception.BusinessException;
 import com.fiap.projects.apipassabola.exception.ResourceNotFoundException;
 import com.fiap.projects.apipassabola.repository.GameParticipantRepository;
@@ -101,6 +102,7 @@ public class GameParticipantService {
         GameParticipant participant = new GameParticipant();
         participant.setGame(game);
         participant.setPlayer(player);
+        participant.setUserType(UserType.PLAYER);
         participant.setParticipationType(GameParticipant.ParticipationType.INDIVIDUAL);
         participant.setTeamSide(teamSide);
         participant.setStatus(GameParticipant.ParticipationStatus.CONFIRMED);
@@ -124,6 +126,7 @@ public class GameParticipantService {
             GameParticipant participant = new GameParticipant();
             participant.setGame(game);
             participant.setPlayer(teamMember);
+            participant.setUserType(UserType.PLAYER);
             participant.setParticipationType(GameParticipant.ParticipationType.WITH_TEAM);
             participant.setTeamSide(teamSide); // ALL team members on the SAME side
             participant.setStatus(GameParticipant.ParticipationStatus.CONFIRMED);
@@ -262,7 +265,12 @@ public class GameParticipantService {
         GameParticipantResponse response = new GameParticipantResponse();
         response.setId(participant.getId());
         response.setGameId(participant.getGame().getId());
-        response.setPlayer(playerService.convertToSummaryResponse(participant.getPlayer()));
+        
+        // Only set player if it exists (for PLAYER participants)
+        if (participant.getPlayer() != null) {
+            response.setPlayer(playerService.convertToSummaryResponse(participant.getPlayer()));
+        }
+        
         response.setParticipationType(participant.getParticipationType());
         response.setStatus(participant.getStatus());
         response.setTeamSide(participant.getTeamSide());
