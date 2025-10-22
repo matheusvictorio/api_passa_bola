@@ -11,6 +11,7 @@
 - [👥 Sistema de Times](#-sistema-de-times)
 - [🤝 Sistema de Seguimento](#-sistema-de-seguimento)
 - [📝 Sistema de Posts](#-sistema-de-posts)
+- [💬 Sistema de Chat](#-sistema-de-chat)
 - [📡 Endpoints da API](#-endpoints-da-api)
 - [💡 Exemplos Práticos](#-exemplos-práticos)
 - [🔧 Troubleshooting](#-troubleshooting)
@@ -1109,6 +1110,388 @@ Authorization: Bearer <token>
 
 ---
 
+## 💬 Sistema de Chat Universal
+
+### 🎉 Características
+- **Chat entre TODOS os tipos de usuários** (PLAYER, ORGANIZATION, SPECTATOR)
+- **WebSocket com STOMP** para mensagens instantâneas em tempo real
+- **Fallback REST** para compatibilidade
+- **Histórico de conversas** persistido no banco
+- **Notificações de mensagens não lidas**
+- **Lista de conversas** com última mensagem
+- **Usa userId global (snowflake)** para identificação única
+
+### 🌐 Quem pode conversar com quem?
+- ✅ **PLAYER** ↔ **PLAYER**, **ORGANIZATION**, **SPECTATOR**
+- ✅ **ORGANIZATION** ↔ **PLAYER**, **ORGANIZATION**, **SPECTATOR**
+- ✅ **SPECTATOR** ↔ **PLAYER**, **ORGANIZATION**, **SPECTATOR**
+
+### 🔌 Conexão WebSocket
+
+**Dois endpoints disponíveis:**
+- `ws://localhost:8080/ws-chat` - WebSocket puro (para Postman, mobile, desktop)
+- `ws://localhost:8080/ws-chat-sockjs` - Com SockJS (para navegadores web)
+
+#### Conectar ao WebSocket (Navegador)
+```javascript
+// Usando SockJS e STOMP (para aplicações web)
+const socket = new SockJS('http://localhost:8080/ws-chat-sockjs');
+const stompClient = Stomp.over(socket);
+
+stompClient.connect(
+  { Authorization: `Bearer ${token}` },
+  (frame) => {
+    console.log('Connected: ' + frame);
+    
+    // Subscribe to receive messages
+    stompClient.subscribe('/user/queue/messages', (message) => {
+      const chatMessage = JSON.parse(message.body);
+      console.log('New message:', chatMessage);
+      // Handle incoming message
+    });
+  },
+  (error) => {
+    console.error('WebSocket error:', error);
+  }
+);
+```
+
+#### Testar no Postman (WebSocket Puro)
+
+**1. Conectar:**
+- Abra nova aba WebSocket no Postman
+- URL: `ws://localhost:8080/ws-chat`
+- Clique em **Connect**
+
+**2. Enviar Frame CONNECT com JWT:**
+```
+CONNECT
+Authorization:Bearer SEU_TOKEN_JWT_AQUI
+accept-version:1.1,1.0
+heart-beat:10000,10000
+
+```
+⚠️ **Importante:** Deixe uma linha em branco no final!
+
+**3. Subscribe para Receber Mensagens:**
+```
+SUBSCRIBE
+id:sub-0
+destination:/user/queue/messages
+
+```
+
+**4. Enviar Mensagem:**
+```
+SEND
+destination:/app/chat.send
+content-type:application/json
+
+{"recipientId":1083690260503501183,"content":"Oi! Vamos treinar?"}
+```
+
+⚠️ **IMPORTANTE:** Use o **userId global** (número grande snowflake) do destinatário, não o ID da entidade!
+
+#### Enviar Mensagem via WebSocket (JavaScript)
+```javascript
+// recipientId deve ser o userId global (snowflake)
+stompClient.send(
+  '/app/chat.send',
+  {},
+  JSON.stringify({
+    recipientId: 1083690260503501183,  // userId global do destinatário
+    content: 'Oi! Vamos treinar amanhã?'
+  })
+);
+```
+
+**Endpoints WebSocket:**
+- **Conexão (Web):** `ws://localhost:8080/ws-chat-sockjs` (com SockJS)
+- **Conexão (Postman/Mobile):** `ws://localhost:8080/ws-chat` (sem SockJS)
+- **Enviar:** `/app/chat.send`
+- **Receber:** `/user/queue/messages`
+
+### 📨 Enviar Mensagem (REST Fallback)
+
+```http
+POST /api/chat/send
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "recipientId": 1083690260503501183,
+  "content": "Oi! Vamos treinar amanhã?"
+}
+```
+
+⚠️ **IMPORTANTE:** `recipientId` deve ser o **userId global (snowflake)** do destinatário!
+
+**Response:**
+```json
+{
+  "id": 1,
+  "senderId": 1578941265158776642,
+  "senderUsername": "maria_silva",
+  "senderName": "Maria Silva",
+  "senderType": "PLAYER",
+  "recipientId": 1083690260503501183,
+  "recipientUsername": "clube_abc",
+  "recipientName": "Clube ABC",
+  "recipientType": "ORGANIZATION",
+  "content": "Oi! Vamos treinar amanhã?",
+  "isRead": false,
+  "createdAt": "2025-10-10T16:45:00"
+}
+```
+
+> **🔒 Validação:** Qualquer usuário autenticado (PLAYER, ORGANIZATION, SPECTATOR) pode enviar mensagens
+
+### 📜 Ver Histórico de Conversa
+
+```http
+GET /api/chat/conversation/{otherUserId}
+Authorization: Bearer <token>
+```
+
+⚠️ **IMPORTANTE:** `otherUserId` deve ser o **userId global (snowflake)** do outro usuário!
+
+**Exemplo:** `GET /api/chat/conversation/1083690260503501183`
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "senderId": 1578941265158776642,
+    "senderUsername": "maria_silva",
+    "senderName": "Maria Silva",
+    "senderType": "PLAYER",
+    "recipientId": 1083690260503501183,
+    "recipientUsername": "clube_abc",
+    "recipientName": "Clube ABC",
+    "recipientType": "ORGANIZATION",
+    "content": "Oi! Vamos treinar amanhã?",
+    "isRead": true,
+    "createdAt": "2025-10-10T16:45:00"
+  },
+  {
+    "id": 2,
+    "senderId": 1083690260503501183,
+    "senderUsername": "clube_abc",
+    "senderName": "Clube ABC",
+    "senderType": "ORGANIZATION",
+    "recipientId": 1578941265158776642,
+    "recipientUsername": "maria_silva",
+    "senderName": "Maria Silva",
+    "senderType": "PLAYER",
+    "content": "Sim! Que horas?",
+    "isRead": true,
+    "createdAt": "2025-10-10T16:46:00"
+  }
+]
+```
+
+### 📋 Listar Conversas
+
+```http
+GET /api/chat/conversations
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+[
+  {
+    "otherUserId": 1083690260503501183,
+    "otherUsername": "clube_abc",
+    "otherName": "Clube ABC",
+    "otherProfilePhotoUrl": null,
+    "lastMessage": "Sim! Que horas?",
+    "lastMessageTime": "2025-10-10T16:46:00",
+    "unreadCount": 0
+  },
+  {
+    "otherUserId": 1234567890123456789,
+    "otherUsername": "julia_santos",
+    "otherName": "Julia Santos",
+    "otherProfilePhotoUrl": null,
+    "lastMessage": "Obrigada pelo treino!",
+    "lastMessageTime": "2025-10-10T15:30:00",
+    "unreadCount": 2
+  }
+]
+```
+
+### ✅ Marcar Mensagens como Lidas
+
+```http
+PUT /api/chat/read/{senderId}
+Authorization: Bearer <token>
+```
+
+⚠️ **IMPORTANTE:** `senderId` deve ser o **userId global (snowflake)** do remetente!
+
+**Exemplo:** `PUT /api/chat/read/1083690260503501183`
+
+> Marca todas as mensagens não lidas de um remetente específico como lidas
+
+### 📊 Outros Endpoints
+
+```http
+# Ver mensagens não lidas
+GET /api/chat/unread
+Authorization: Bearer <token>
+
+# Contar mensagens não lidas
+GET /api/chat/unread/count
+Authorization: Bearer <token>
+
+# Ver conversa com paginação
+GET /api/chat/conversation/{otherUserId}/paginated?page=0&size=50
+Authorization: Bearer <token>
+```
+
+### 🔑 Como obter o userId global?
+
+Ao fazer login, a resposta contém o `userId`:
+
+```json
+{
+  "token": "eyJhbGci...",
+  "userId": "1083690260503501183",  // ← Use este no chat!
+  "username": "maria_silva",
+  "email": "maria@email.com",
+  "role": "PLAYER",
+  "entityId": 8
+}
+```
+
+### 🔔 Mensagens Não Lidas
+
+#### Contar Não Lidas
+```http
+GET /api/chat/unread/count
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+5
+```
+
+#### Listar Não Lidas
+```http
+GET /api/chat/unread
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+[
+  {
+    "id": 10,
+    "senderId": 7,
+    "senderUsername": "julia_santos",
+    "senderName": "Julia Santos",
+    "recipientId": 3,
+    "recipientUsername": "maria_silva",
+    "recipientName": "Maria Silva",
+    "content": "Você viu o resultado do jogo?",
+    "isRead": false,
+    "createdAt": "2025-10-10T17:00:00"
+  }
+]
+```
+
+### 📱 Exemplo de Implementação Frontend
+
+```javascript
+// 1. Conectar ao WebSocket
+function connectChat(token) {
+  const socket = new SockJS('http://localhost:8080/ws-chat');
+  const stompClient = Stomp.over(socket);
+  
+  stompClient.connect(
+    { Authorization: `Bearer ${token}` },
+    () => {
+      // Subscribe to messages
+      stompClient.subscribe('/user/queue/messages', (message) => {
+        const newMessage = JSON.parse(message.body);
+        displayMessage(newMessage);
+        updateConversationList();
+      });
+    }
+  );
+  
+  return stompClient;
+}
+
+// 2. Enviar mensagem
+function sendMessage(stompClient, recipientId, content) {
+  stompClient.send(
+    '/app/chat.send',
+    {},
+    JSON.stringify({ recipientId, content })
+  );
+}
+
+// 3. Carregar histórico
+async function loadConversation(otherUserId, token) {
+  const response = await fetch(
+    `http://localhost:8080/api/chat/conversation/${otherUserId}`,
+    {
+      headers: { Authorization: `Bearer ${token}` }
+    }
+  );
+  return await response.json();
+}
+
+// 4. Marcar como lida
+async function markAsRead(senderId, token) {
+  await fetch(
+    `http://localhost:8080/api/chat/read/${senderId}`,
+    {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` }
+    }
+  );
+}
+```
+
+### 🔐 Regras de Negócio
+
+| Regra | Descrição |
+|-------|-----------|
+| **Autenticação** | Apenas jogadoras (PLAYER) autenticadas podem usar o chat |
+| **Auto-mensagem** | Não é possível enviar mensagem para si mesma |
+| **Persistência** | Todas as mensagens são salvas no banco de dados |
+| **Tempo Real** | WebSocket envia notificações instantâneas |
+| **Fallback REST** | API REST disponível se WebSocket falhar |
+| **Privacidade** | Apenas participantes da conversa veem as mensagens |
+
+### 📊 Estrutura do Banco de Dados
+
+**Tabela: `chat_messages`**
+```sql
+CREATE TABLE chat_messages (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  sender_id BIGINT NOT NULL,
+  sender_username VARCHAR(255) NOT NULL,
+  sender_name VARCHAR(255) NOT NULL,
+  recipient_id BIGINT NOT NULL,
+  recipient_username VARCHAR(255) NOT NULL,
+  recipient_name VARCHAR(255) NOT NULL,
+  content TEXT NOT NULL,
+  is_read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP NOT NULL,
+  INDEX idx_sender_id (sender_id),
+  INDEX idx_recipient_id (recipient_id),
+  INDEX idx_created_at (created_at)
+);
+```
+
+---
+
 ## 📡 Endpoints Completos da API
 
 ### 🔑 Autenticação (`/api/auth`)
@@ -1242,6 +1625,23 @@ Authorization: Bearer <token>
 |--------|----------|------|-----------|
 | GET | `/api/post-likes/my-likes` | ✅ | Posts que curtí |
 | POST | `/api/post-likes/check-liked` | ✅ | Verificar múltiplos posts |
+
+### 💬 Chat (`/api/chat`)
+
+| Método | Endpoint | Auth | Descrição |
+|--------|----------|------|-----------|
+| POST | `/api/chat/send` | PLAYER | Enviar mensagem (REST) |
+| GET | `/api/chat/conversation/{otherUserId}` | PLAYER | Histórico de conversa |
+| GET | `/api/chat/conversation/{otherUserId}/paginated` | PLAYER | Histórico paginado |
+| PUT | `/api/chat/read/{senderId}` | PLAYER | Marcar como lidas |
+| GET | `/api/chat/conversations` | PLAYER | Listar conversas |
+| GET | `/api/chat/unread/count` | PLAYER | Contar não lidas |
+| GET | `/api/chat/unread` | PLAYER | Listar não lidas |
+
+**WebSocket Endpoints:**
+- **Conexão:** `ws://localhost:8080/ws-chat` (SockJS)
+- **Enviar:** `/app/chat.send` (STOMP)
+- **Receber:** `/user/queue/messages` (Subscribe)
 
 ---
 
