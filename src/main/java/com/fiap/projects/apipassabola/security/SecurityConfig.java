@@ -43,6 +43,7 @@ public class SecurityConfig {
                 .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/ws-chat/**").permitAll() // WebSocket handshake - auth happens in STOMP CONNECT
+                .requestMatchers("/ws-chat-sockjs/**").permitAll() // SockJS endpoints including /info
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session
