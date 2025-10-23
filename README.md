@@ -12,6 +12,7 @@
 - [🤝 Sistema de Seguimento](#-sistema-de-seguimento)
 - [📝 Sistema de Posts](#-sistema-de-posts)
 - [💬 Sistema de Chat](#-sistema-de-chat)
+- [🔔 Sistema de Notificações](#-sistema-de-notificações-em-tempo-real)
 - [📡 Endpoints da API](#-endpoints-da-api)
 - [💡 Exemplos Práticos](#-exemplos-práticos)
 - [🔧 Troubleshooting](#-troubleshooting)
@@ -1492,6 +1493,429 @@ CREATE TABLE chat_messages (
 
 ---
 
+## 🔔 Sistema de Notificações em Tempo Real
+
+### 🎯 Visão Geral
+
+Sistema completo de notificações que **salva tudo no banco de dados** E **envia em tempo real via WebSocket**. Todas as notificações são persistidas e enviadas instantaneamente para o usuário.
+
+### ✅ Tipos de Notificações Disponíveis
+
+| Tipo | Descrição | Quando Acontece |
+|------|-----------|-----------------|
+| **TEAM_INVITE_RECEIVED** | Convite de time recebido | Quando alguém te convida para um time |
+| **TEAM_INVITE_ACCEPTED** | Convite aceito | Quando alguém aceita seu convite |
+| **NEW_FOLLOWER** | Novo seguidor | Quando alguém começa a seguir você |
+| **POST_LIKED** | Post curtido | Quando alguém curte seu post |
+
+### 🏗️ Como Funciona
+
+```
+Ação → Service → Salva no DB → Envia WebSocket → Frontend recebe instantaneamente
+```
+
+**Exemplo Real:**
+1. Maria convida João para o time "As Incríveis"
+2. Sistema salva notificação no banco
+3. WebSocket envia para `/topic/notifications/player/123`
+4. João recebe notificação instantânea
+5. Se João estiver offline, notificação fica salva no banco
+
+### 🔌 Conexão WebSocket
+
+#### 1. Conectar ao WebSocket
+
+```javascript
+const socket = new SockJS('http://localhost:8080/ws');
+const stompClient = Stomp.over(socket);
+
+stompClient.connect({
+    'Authorization': 'Bearer ' + token
+}, function(frame) {
+    console.log('Connected: ' + frame);
+    subscribeToNotifications();
+});
+```
+
+#### 2. Inscrever-se no Tópico de Notificações
+
+O tópico é específico para cada usuário baseado no **userId global** e **tipo**:
+
+```javascript
+// Para PLAYER com userId 123
+stompClient.subscribe('/topic/notifications/player/123', function(notification) {
+    const notif = JSON.parse(notification.body);
+    showNotification(notif);
+});
+
+// Para ORGANIZATION com userId 456
+stompClient.subscribe('/topic/notifications/organization/456', function(notification) {
+    const notif = JSON.parse(notification.body);
+    showNotification(notif);
+});
+
+// Para SPECTATOR com userId 789
+stompClient.subscribe('/topic/notifications/spectator/789', function(notification) {
+    const notif = JSON.parse(notification.body);
+    showNotification(notif);
+});
+```
+
+#### 3. Receber Contador de Não Lidas
+
+```javascript
+// Inscrever-se no tópico de contador
+stompClient.subscribe('/topic/notifications/player/123/count', function(update) {
+    const data = JSON.parse(update.body);
+    updateBadge(data.unreadCount);
+});
+```
+
+### 📡 Endpoints REST
+
+#### Buscar Notificações
+
+```http
+GET /api/notifications?page=0&size=20
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+{
+  "content": [
+    {
+      "id": 1,
+      "senderId": 456,
+      "senderType": "PLAYER",
+      "senderUsername": "maria_silva",
+      "senderName": "Maria Silva",
+      "type": "TEAM_INVITE_RECEIVED",
+      "message": "Maria Silva convidou você para entrar no time As Incríveis",
+      "metadata": "{\"teamId\":10,\"teamName\":\"As Incríveis\",\"inviteId\":25}",
+      "actionUrl": "/teams/10/invites/25",
+      "isRead": false,
+      "createdAt": "2025-10-22T23:15:00",
+      "readAt": null
+    }
+  ],
+  "totalElements": 15,
+  "totalPages": 1
+}
+```
+
+#### Buscar Apenas Não Lidas
+
+```http
+GET /api/notifications/unread?page=0&size=20
+Authorization: Bearer <token>
+```
+
+#### Contar Não Lidas
+
+```http
+GET /api/notifications/unread/count
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+{
+  "unreadCount": 5
+}
+```
+
+#### Buscar Recentes (últimas 24h)
+
+```http
+GET /api/notifications/recent
+Authorization: Bearer <token>
+```
+
+#### Marcar Como Lida
+
+```http
+PATCH /api/notifications/{id}/read
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+{
+  "message": "Notificação marcada como lida"
+}
+```
+
+#### Marcar Todas Como Lidas
+
+```http
+PATCH /api/notifications/read-all
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+{
+  "message": "Todas as notificações foram marcadas como lidas",
+  "count": 10
+}
+```
+
+#### Deletar Notificação
+
+```http
+DELETE /api/notifications/{id}
+Authorization: Bearer <token>
+```
+
+### 📦 Estrutura da Notificação
+
+```json
+{
+  "id": 1,
+  "senderId": 456,              // userId global do remetente
+  "senderType": "PLAYER",       // PLAYER, ORGANIZATION, SPECTATOR
+  "senderUsername": "maria_silva",
+  "senderName": "Maria Silva",
+  "type": "TEAM_INVITE_RECEIVED",
+  "message": "Maria Silva convidou você para entrar no time As Incríveis",
+  "metadata": "{\"teamId\":10,\"teamName\":\"As Incríveis\",\"inviteId\":25}",
+  "actionUrl": "/teams/10/invites/25",
+  "isRead": false,
+  "createdAt": "2025-10-22T23:15:00",
+  "readAt": null
+}
+```
+
+### 🎨 Exemplo de Implementação Frontend
+
+#### React + SockJS + Stomp
+
+```javascript
+import SockJS from 'sockjs-client';
+import { Stomp } from '@stomp/stompjs';
+
+class NotificationService {
+    constructor(userId, userType, token) {
+        this.userId = userId;
+        this.userType = userType.toLowerCase(); // player, organization, spectator
+        this.token = token;
+        this.stompClient = null;
+    }
+
+    connect(onNotificationReceived, onCountUpdate) {
+        const socket = new SockJS('http://localhost:8080/ws');
+        this.stompClient = Stomp.over(socket);
+
+        this.stompClient.connect({
+            'Authorization': `Bearer ${this.token}`
+        }, () => {
+            // Inscrever-se em notificações
+            this.stompClient.subscribe(
+                `/topic/notifications/${this.userType}/${this.userId}`,
+                (message) => {
+                    const notification = JSON.parse(message.body);
+                    onNotificationReceived(notification);
+                }
+            );
+
+            // Inscrever-se em atualizações de contador
+            this.stompClient.subscribe(
+                `/topic/notifications/${this.userType}/${this.userId}/count`,
+                (message) => {
+                    const data = JSON.parse(message.body);
+                    onCountUpdate(data.unreadCount);
+                }
+            );
+        });
+    }
+
+    disconnect() {
+        if (this.stompClient) {
+            this.stompClient.disconnect();
+        }
+    }
+}
+
+// Uso:
+const notifService = new NotificationService(123, 'PLAYER', authToken);
+
+notifService.connect(
+    (notification) => {
+        // Mostrar notificação
+        toast.info(notification.message);
+        // Adicionar à lista
+        addNotificationToList(notification);
+    },
+    (unreadCount) => {
+        // Atualizar badge
+        updateNotificationBadge(unreadCount);
+    }
+);
+```
+
+#### Vue.js Exemplo
+
+```javascript
+export default {
+    data() {
+        return {
+            notifications: [],
+            unreadCount: 0,
+            stompClient: null
+        }
+    },
+    
+    mounted() {
+        this.connectWebSocket();
+        this.loadNotifications();
+    },
+    
+    methods: {
+        connectWebSocket() {
+            const socket = new SockJS('http://localhost:8080/ws');
+            this.stompClient = Stomp.over(socket);
+            
+            this.stompClient.connect({
+                'Authorization': `Bearer ${this.$store.state.token}`
+            }, () => {
+                const userId = this.$store.state.user.userId;
+                const userType = this.$store.state.user.userType.toLowerCase();
+                
+                // Notificações
+                this.stompClient.subscribe(
+                    `/topic/notifications/${userType}/${userId}`,
+                    (message) => {
+                        const notif = JSON.parse(message.body);
+                        this.notifications.unshift(notif);
+                        this.unreadCount++;
+                        this.showToast(notif);
+                    }
+                );
+                
+                // Contador
+                this.stompClient.subscribe(
+                    `/topic/notifications/${userType}/${userId}/count`,
+                    (message) => {
+                        const data = JSON.parse(message.body);
+                        this.unreadCount = data.unreadCount;
+                    }
+                );
+            });
+        },
+        
+        async loadNotifications() {
+            const response = await fetch('/api/notifications?page=0&size=20', {
+                headers: {
+                    'Authorization': `Bearer ${this.$store.state.token}`
+                }
+            });
+            const data = await response.json();
+            this.notifications = data.content;
+        },
+        
+        async markAsRead(notificationId) {
+            await fetch(`/api/notifications/${notificationId}/read`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${this.$store.state.token}`
+                }
+            });
+        },
+        
+        showToast(notification) {
+            this.$toast.info(notification.message, {
+                onClick: () => {
+                    if (notification.actionUrl) {
+                        this.$router.push(notification.actionUrl);
+                    }
+                }
+            });
+        }
+    },
+    
+    beforeUnmount() {
+        if (this.stompClient) {
+            this.stompClient.disconnect();
+        }
+    }
+}
+```
+
+### 🔍 Metadados por Tipo de Notificação
+
+#### TEAM_INVITE_RECEIVED
+```json
+{
+  "teamId": 10,
+  "teamName": "As Incríveis",
+  "inviteId": 25
+}
+```
+
+#### TEAM_INVITE_ACCEPTED
+```json
+{
+  "teamId": 10,
+  "teamName": "As Incríveis",
+  "playerId": 456
+}
+```
+
+#### NEW_FOLLOWER
+```json
+{
+  "followerId": 456,
+  "followerType": "PLAYER"
+}
+```
+
+#### POST_LIKED
+```json
+{
+  "postId": 789,
+  "likerId": 456
+}
+```
+
+### 🔐 Regras de Negócio
+
+| Regra | Descrição |
+|-------|-----------|
+| **Autenticação** | Todas as operações requerem autenticação JWT |
+| **Privacidade** | Usuários só veem suas próprias notificações |
+| **Persistência** | Todas as notificações são salvas no banco |
+| **Tempo Real** | WebSocket envia notificações instantaneamente |
+| **Offline** | Se usuário estiver offline, notificação fica salva |
+| **Não Duplicação** | Não envia notificação para o próprio usuário |
+
+### 📊 Estrutura do Banco de Dados
+
+**Tabela: `notifications`**
+```sql
+CREATE TABLE notifications (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  recipient_id BIGINT NOT NULL,
+  recipient_type VARCHAR(50) NOT NULL,
+  sender_id BIGINT NOT NULL,
+  sender_type VARCHAR(50) NOT NULL,
+  sender_username VARCHAR(255) NOT NULL,
+  sender_name VARCHAR(255) NOT NULL,
+  type VARCHAR(50) NOT NULL,
+  message VARCHAR(500) NOT NULL,
+  metadata TEXT,
+  action_url VARCHAR(255),
+  is_read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP NOT NULL,
+  read_at TIMESTAMP,
+  INDEX idx_recipient (recipient_id, recipient_type),
+  INDEX idx_is_read (is_read),
+  INDEX idx_created_at (created_at)
+);
+```
+
+---
+
 ## 📡 Endpoints Completos da API
 
 ### 🔑 Autenticação (`/api/auth`)
@@ -1642,6 +2066,23 @@ CREATE TABLE chat_messages (
 - **Conexão:** `ws://localhost:8080/ws-chat` (SockJS)
 - **Enviar:** `/app/chat.send` (STOMP)
 - **Receber:** `/user/queue/messages` (Subscribe)
+
+### 🔔 Notificações (`/api/notifications`)
+
+| Método | Endpoint | Auth | Descrição |
+|--------|----------|------|-----------|
+| GET | `/api/notifications` | ✅ | Listar notificações (paginado) |
+| GET | `/api/notifications/unread` | ✅ | Listar não lidas (paginado) |
+| GET | `/api/notifications/unread/count` | ✅ | Contar não lidas |
+| GET | `/api/notifications/recent` | ✅ | Notificações recentes (24h) |
+| PATCH | `/api/notifications/{id}/read` | ✅ | Marcar como lida |
+| PATCH | `/api/notifications/read-all` | ✅ | Marcar todas como lidas |
+| DELETE | `/api/notifications/{id}` | ✅ | Deletar notificação |
+
+**WebSocket Endpoints:**
+- **Conexão:** `ws://localhost:8080/ws` (SockJS)
+- **Receber Notificações:** `/topic/notifications/{userType}/{userId}` (Subscribe)
+- **Receber Contador:** `/topic/notifications/{userType}/{userId}/count` (Subscribe)
 
 ---
 
