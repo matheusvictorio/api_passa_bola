@@ -37,8 +37,8 @@ public class NotificationController {
         Pageable pageable = PageRequest.of(page, size);
         
         Page<NotificationResponse> notifications = notificationService.getMyNotifications(
-                currentUser.getId(),
-                currentUser.getType(),
+                currentUser.getUserId(),
+                currentUser.getUserType(),
                 pageable
         );
         
@@ -58,8 +58,8 @@ public class NotificationController {
         Pageable pageable = PageRequest.of(page, size);
         
         Page<NotificationResponse> notifications = notificationService.getUnreadNotifications(
-                currentUser.getId(),
-                currentUser.getType(),
+                currentUser.getUserId(),
+                currentUser.getUserType(),
                 pageable
         );
         
@@ -75,8 +75,8 @@ public class NotificationController {
         UserContextService.UserIdAndType currentUser = userContextService.getCurrentUserIdAndType();
         
         long count = notificationService.countUnreadNotifications(
-                currentUser.getId(),
-                currentUser.getType()
+                currentUser.getUserId(),
+                currentUser.getUserType()
         );
         
         Map<String, Long> response = new HashMap<>();
@@ -94,8 +94,8 @@ public class NotificationController {
         UserContextService.UserIdAndType currentUser = userContextService.getCurrentUserIdAndType();
         
         List<NotificationResponse> notifications = notificationService.getRecentNotifications(
-                currentUser.getId(),
-                currentUser.getType()
+                currentUser.getUserId(),
+                currentUser.getUserType()
         );
         
         return ResponseEntity.ok(notifications);
@@ -109,7 +109,7 @@ public class NotificationController {
     public ResponseEntity<Map<String, String>> markAsRead(@PathVariable Long id) {
         UserContextService.UserIdAndType currentUser = userContextService.getCurrentUserIdAndType();
         
-        notificationService.markAsRead(id, currentUser.getId(), currentUser.getType());
+        notificationService.markAsRead(id, currentUser.getUserId(), currentUser.getUserType());
         
         Map<String, String> response = new HashMap<>();
         response.put("message", "Notificação marcada como lida");
@@ -125,7 +125,7 @@ public class NotificationController {
     public ResponseEntity<Map<String, Object>> markAllAsRead() {
         UserContextService.UserIdAndType currentUser = userContextService.getCurrentUserIdAndType();
         
-        int count = notificationService.markAllAsRead(currentUser.getId(), currentUser.getType());
+        int count = notificationService.markAllAsRead(currentUser.getUserId(), currentUser.getUserType());
         
         Map<String, Object> response = new HashMap<>();
         response.put("message", "Todas as notificações foram marcadas como lidas");
@@ -142,7 +142,7 @@ public class NotificationController {
     public ResponseEntity<Map<String, String>> deleteNotification(@PathVariable Long id) {
         UserContextService.UserIdAndType currentUser = userContextService.getCurrentUserIdAndType();
         
-        notificationService.deleteNotification(id, currentUser.getId(), currentUser.getType());
+        notificationService.deleteNotification(id, currentUser.getUserId(), currentUser.getUserType());
         
         Map<String, String> response = new HashMap<>();
         response.put("message", "Notificação deletada com sucesso");
