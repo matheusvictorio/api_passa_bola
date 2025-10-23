@@ -26,6 +26,7 @@ public class FollowService {
     private final OrganizationRepository organizationRepository;
     private final SpectatorRepository spectatorRepository;
     private final UserContextService userContextService;
+    private final NotificationService notificationService;
     
     @Transactional
     public String followUser(FollowRequest request) {
@@ -56,6 +57,9 @@ public class FollowService {
         
         // Executar o seguimento baseado nos tipos
         executeFollow(followerEntityId, currentUser.getUserType(), targetEntityId, request.getTargetUserType());
+        
+        // Enviar notificação em tempo real para o usuário que foi seguido
+        sendFollowNotification(followerEntityId, currentUser.getUserType(), targetEntityId, request.getTargetUserType());
         
         return "Successfully followed user";
     }
@@ -598,5 +602,82 @@ public class FollowService {
         // response.setFavoriteTeamId(spectator.getFavoriteTeamId());
         
         return response;
+    }
+    
+    /**
+     * Envia notificação de novo seguidor
+     */
+    private void sendFollowNotification(Long followerId, UserType followerType, Long targetId, UserType targetType) {
+        try {
+            // Buscar informações do seguidor
+            String followerUsername = null;
+            String followerName = null;
+            Long followerUserId = null;
+            
+            switch (followerType) {
+                case PLAYER:
+                    Player followerPlayer = playerRepository.findById(followerId).orElse(null);
+                    if (followerPlayer != null) {
+                        followerUsername = followerPlayer.getRealUsername();
+                        followerName = followerPlayer.getName();
+                        followerUserId = followerPlayer.getUserId();
+                    }
+                    break;
+                case ORGANIZATION:
+                    Organization followerOrg = organizationRepository.findById(followerId).orElse(null);
+                    if (followerOrg != null) {
+                        followerUsername = followerOrg.getRealUsername();
+                        followerName = followerOrg.getName();
+                        followerUserId = followerOrg.getUserId();
+                    }
+                    break;
+                case SPECTATOR:
+                    Spectator followerSpectator = spectatorRepository.findById(followerId).orElse(null);
+                    if (followerSpectator != null) {
+                        followerUsername = followerSpectator.getRealUsername();
+                        followerName = followerSpectator.getName();
+                        followerUserId = followerSpectator.getUserId();
+                    }
+                    break;
+            }
+            
+            // Buscar userId do alvo
+            Long targetUserId = null;
+            switch (targetType) {
+                case PLAYER:
+                    Player targetPlayer = playerRepository.findById(targetId).orElse(null);
+                    if (targetPlayer != null) {
+                        targetUserId = targetPlayer.getUserId();
+                    }
+                    break;
+                case ORGANIZATION:
+                    Organization targetOrg = organizationRepository.findById(targetId).orElse(null);
+                    if (targetOrg != null) {
+                        targetUserId = targetOrg.getUserId();
+                    }
+                    break;
+                case SPECTATOR:
+                    Spectator targetSpectator = spectatorRepository.findById(targetId).orElse(null);
+                    if (targetSpectator != null) {
+                        targetUserId = targetSpectator.getUserId();
+                    }
+                    break;
+            }
+            
+            // Enviar notificação se todas as informações foram encontradas
+            if (followerUsername != null && followerName != null && followerUserId != null && targetUserId != null) {
+                notificationService.notifyNewFollower(
+                        targetUserId,
+                        targetType,
+                        followerUserId,
+                        followerType,
+                        followerUsername,
+                        followerName
+                );
+            }
+        } catch (Exception e) {
+            // Log mas não falha a operação de follow se a notificação falhar
+            System.err.println("Erro ao enviar notificação de follow: " + e.getMessage());
+        }
     }
 }

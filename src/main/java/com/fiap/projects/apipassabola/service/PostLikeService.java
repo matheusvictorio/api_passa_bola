@@ -25,6 +25,7 @@ public class PostLikeService {
     private final PostLikeRepository postLikeRepository;
     private final PostRepository postRepository;
     private final UserContextService userContextService;
+    private final NotificationService notificationService;
     
     /**
      * Like a post
@@ -66,6 +67,19 @@ public class PostLikeService {
         postRepository.save(post);
         
         log.info("User {} ({}) liked post {}", username, userType, postId);
+        
+        // Enviar notificação ao autor do post (se não for o próprio usuário curtindo)
+        if (!post.getAuthorId().equals(userId) || !post.getAuthorType().equals(userType)) {
+            notificationService.notifyPostLiked(
+                    post.getAuthorId(),
+                    post.getAuthorType(),
+                    userId,
+                    userType,
+                    username,
+                    name,
+                    postId
+            );
+        }
         
         return convertToResponse(savedLike);
     }
@@ -222,4 +236,5 @@ public class PostLikeService {
                 throw new RuntimeException("Unknown user type: " + userType);
         }
     }
+    
 }

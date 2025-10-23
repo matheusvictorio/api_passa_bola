@@ -34,6 +34,7 @@ public class TeamService {
     private final TeamInviteRepository teamInviteRepository;
     private final PlayerRepository playerRepository;
     private final UserContextService userContextService;
+    private final NotificationService notificationService;
     
     // Create a new team (only players can create teams)
     public Team createTeam(String teamName) {
@@ -108,6 +109,17 @@ public class TeamService {
         log.info("Team invite sent from {} to {} for team: {}", 
                 currentPlayer.getRealUsername(), invitedPlayer.getRealUsername(), team.getNameTeam());
         
+        // Enviar notificação em tempo real
+        notificationService.notifyTeamInviteReceived(
+                invitedPlayer.getUserId(),
+                currentPlayer.getUserId(),
+                currentPlayer.getRealUsername(),
+                currentPlayer.getName(),
+                teamId,
+                team.getNameTeam(),
+                savedInvite.getId()
+        );
+        
         return savedInvite;
     }
     
@@ -146,6 +158,18 @@ public class TeamService {
         
         log.info("Player {} accepted invite to team: {}", 
                 currentPlayer.getRealUsername(), team.getNameTeam());
+        
+        // Enviar notificação ao inviter (líder do time)
+        Player inviter = invite.getInviter();
+        notificationService.notifyTeamInviteAccepted(
+                inviter.getUserId(),
+                com.fiap.projects.apipassabola.entity.UserType.PLAYER,
+                currentPlayer.getUserId(),
+                currentPlayer.getRealUsername(),
+                currentPlayer.getName(),
+                team.getId(),
+                team.getNameTeam()
+        );
         
         return team;
     }
