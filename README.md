@@ -8,6 +8,8 @@
 - [🏗️ Arquitetura da API](#️-arquitetura-da-api)
 - [🔐 Autenticação e Autorização](#-autenticação-e-autorização)
 - [⚽ Sistema de Jogos](#-sistema-de-jogos)
+- [🏁 Finalização de Jogos](#-finalização-de-jogos)
+- [🏆 Sistema de Ranking e Pontos](#-sistema-de-ranking-e-pontos)
 - [👥 Sistema de Times](#-sistema-de-times)
 - [🤝 Sistema de Seguimento](#-sistema-de-seguimento)
 - [📝 Sistema de Posts](#-sistema-de-posts)
@@ -730,6 +732,591 @@ GET /api/games/championship?championship=Copa%20Nacional&page=0&size=20
 # Buscar por período
 GET /api/games/date-range?startDate=2025-10-01T00:00:00&endDate=2025-10-31T23:59:59&page=0&size=20
 ```
+
+---
+
+## 🏁 Finalização de Jogos
+
+### 🎯 Visão Geral
+
+Sistema completo para finalizar jogos com registro de placar e gols das jogadoras. Apenas o **criador do jogo** pode finalizá-lo, e o sistema distribui automaticamente pontos de ranking para jogos de **CHAMPIONSHIP** e **CUP**.
+
+### Características
+
+- ✅ Apenas o **criador** pode finalizar o jogo
+- ✅ Registro de **placar** (gols do time 1 e time 2)
+- ✅ Registro de **gols individuais** com jogadoras que marcaram
+- ✅ Suporte a **gols contra** (own goals)
+- ✅ Validação automática: número de gols deve bater com a lista
+- ✅ Distribuição automática de **pontos de ranking**
+- ✅ Minuto do gol (opcional)
+- ✅ Observações sobre o jogo
+
+---
+
+### 🎮 Finalizar Jogo
+
+```http
+POST /api/games/{id}/finish
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "homeGoals": 3,
+  "awayGoals": 2,
+  "goals": [
+    {
+      "playerId": 10,
+      "teamSide": 1,
+      "minute": 15,
+      "isOwnGoal": false
+    },
+    {
+      "playerId": 20,
+      "teamSide": 1,
+      "minute": 32,
+      "isOwnGoal": false
+    },
+    {
+      "playerId": 30,
+      "teamSide": 2,
+      "minute": 45,
+      "isOwnGoal": false
+    },
+    {
+      "playerId": 10,
+      "teamSide": 1,
+      "minute": 67,
+      "isOwnGoal": false
+    },
+    {
+      "playerId": 40,
+      "teamSide": 2,
+      "minute": 80,
+      "isOwnGoal": false
+    }
+  ],
+  "notes": "Jogo muito disputado! Ótima atuação de Maria com 2 gols."
+}
+```
+
+**Campos:**
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `homeGoals` | Integer | ✅ | Gols do time 1 (casa) |
+| `awayGoals` | Integer | ✅ | Gols do time 2 (fora) |
+| `goals` | Array | ❌ | Lista de gols com detalhes |
+| `goals[].playerId` | Long | ✅ | ID da jogadora que marcou |
+| `goals[].teamSide` | Integer | ✅ | Time (1 ou 2) |
+| `goals[].minute` | Integer | ❌ | Minuto do gol |
+| `goals[].isOwnGoal` | Boolean | ❌ | Se é gol contra (padrão: false) |
+| `notes` | String | ❌ | Observações sobre o jogo |
+
+**Response:**
+```json
+{
+  "id": 123,
+  "gameType": "CHAMPIONSHIP",
+  "gameName": "Campeonato Regional - Fase 1",
+  "hostUsername": "maria_silva",
+  "gameDate": "2025-11-20T16:00:00",
+  "venue": "Estádio Municipal",
+  "status": "FINISHED",
+  "homeGoals": 3,
+  "awayGoals": 2,
+  "result": "3 - 2",
+  "isDraw": false,
+  "winningTeamSide": 1,
+  "team1Players": [...],
+  "team2Players": [...],
+  "notes": "Jogo muito disputado! Ótima atuação de Maria com 2 gols.",
+  "createdAt": "2025-11-15T10:00:00",
+  "updatedAt": "2025-11-20T18:00:00"
+}
+```
+
+---
+
+### ⚽ Consultar Gols
+
+#### **Gols de um Jogo:**
+```http
+GET /api/goals/game/{gameId}
+```
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "gameId": 123,
+    "playerId": 10,
+    "playerName": "Maria Silva",
+    "playerUsername": "maria_silva",
+    "teamSide": 1,
+    "minute": 15,
+    "isOwnGoal": false,
+    "createdAt": "2025-11-20T16:15:00"
+  },
+  {
+    "id": 2,
+    "gameId": 123,
+    "playerId": 10,
+    "playerName": "Maria Silva",
+    "playerUsername": "maria_silva",
+    "teamSide": 1,
+    "minute": 67,
+    "isOwnGoal": false,
+    "createdAt": "2025-11-20T17:07:00"
+  }
+]
+```
+
+#### **Gols de uma Jogadora:**
+```http
+GET /api/goals/player/{playerId}
+```
+
+#### **Total de Gols de uma Jogadora:**
+```http
+GET /api/goals/player/{playerId}/count
+```
+
+**Response:**
+```json
+15
+```
+
+---
+
+### 🎯 Validações
+
+| Validação | Descrição |
+|-----------|-----------|
+| **Permissão** | Apenas o criador do jogo pode finalizá-lo |
+| **Status** | Jogo não pode estar já finalizado |
+| **Contagem** | Número de gols deve bater com a lista de gols |
+| **Jogadoras** | Todas as jogadoras devem existir no sistema |
+| **Time Side** | Deve ser 1 ou 2 |
+| **Gols Negativos** | Não são permitidos |
+
+---
+
+### 📊 Regras de Negócio
+
+#### **Para Jogos FRIENDLY:**
+- ✅ Placar é registrado
+- ✅ Gols individuais são salvos
+- ❌ **NÃO conta para ranking**
+
+#### **Para Jogos CHAMPIONSHIP:**
+- ✅ Placar é registrado
+- ✅ Gols individuais são salvos
+- ✅ **Conta para ranking** (pontos distribuídos automaticamente)
+
+#### **Para Jogos CUP:**
+- ✅ Placar é registrado
+- ✅ Gols individuais são salvos
+- ✅ **Conta para ranking** (pontos distribuídos automaticamente)
+
+---
+
+### 💡 Exemplo Completo
+
+```bash
+# 1. Criar jogo de campeonato
+curl -X POST http://localhost:8080/api/games/championship \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "gameName": "Final do Campeonato",
+    "gameDate": "2025-12-01T15:00:00",
+    "venue": "Estádio Central",
+    "hasSpectators": true,
+    "minPlayers": 22,
+    "maxPlayers": 22
+  }'
+
+# 2. Jogadoras entram no jogo
+curl -X POST http://localhost:8080/api/game-participants/join \
+  -H "Authorization: Bearer <token_maria>" \
+  -d '{"gameId": 123, "participationType": "INDIVIDUAL", "teamSide": 1}'
+
+# 3. Finalizar jogo com gols
+curl -X POST http://localhost:8080/api/games/123/finish \
+  -H "Authorization: Bearer <token_criador>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "homeGoals": 2,
+    "awayGoals": 1,
+    "goals": [
+      {"playerId": 10, "teamSide": 1, "minute": 23},
+      {"playerId": 20, "teamSide": 2, "minute": 45},
+      {"playerId": 10, "teamSide": 1, "minute": 78}
+    ],
+    "notes": "Maria fez 2 gols e foi a artilheira!"
+  }'
+
+# 4. Ver gols do jogo
+curl -X GET http://localhost:8080/api/goals/game/123
+
+# 5. Ver total de gols de Maria
+curl -X GET http://localhost:8080/api/goals/player/10/count
+```
+
+---
+
+## 🏆 Sistema de Ranking e Pontos
+
+### 🎯 Visão Geral
+
+Sistema completo de gamificação com **rankings**, **divisões** e **pontos** para jogadoras e times. Apenas jogos de **CHAMPIONSHIP** e **CUP** contam para o ranking.
+
+### Características
+
+- 🥇 **7 Divisões** de Bronze a Lendária
+- 📊 **Rankings separados** para jogadoras e times
+- ⚽ **Sistema de pontos**: Vitória (3), Empate (1), Derrota (0)
+- 📈 **Estatísticas completas**: vitórias, derrotas, taxa de vitória, sequências
+- 🎮 **Distribuição automática** de pontos após jogos
+- 🏅 **Posições globais e por divisão**
+- 🔥 **Sequências de vitórias** (streaks)
+
+---
+
+### 🏅 Divisões do Ranking
+
+| Divisão | Pontos | Vitórias Necessárias | Emoji |
+|---------|--------|---------------------|-------|
+| **Bronze** | 0 - 29 | 0 - 9 | 🥉 |
+| **Prata** | 30 - 59 | 10 - 19 | 🥈 |
+| **Ouro** | 60 - 99 | 20 - 33 | 🥇 |
+| **Platina** | 100 - 149 | 34 - 49 | 💎 |
+| **Diamante** | 150 - 199 | 50 - 66 | 💠 |
+| **Mestre** | 200 - 299 | 67 - 99 | 👑 |
+| **Lendária** | 300+ | 100+ | ⭐ |
+
+---
+
+### 📊 Sistema de Pontuação
+
+O sistema recompensa tanto **vitórias** quanto **desempenho individual** (gols marcados):
+
+| Resultado | Pontos Base | Bônus por Gol | Total |
+|-----------|-------------|---------------|-------|
+| **Vitória** | +3 | +1 por gol | 3 + gols |
+| **Empate** | +1 | +1 por gol | 1 + gols |
+| **Derrota** | 0 | +1 por gol | 0 + gols |
+
+#### **Exemplos Práticos:**
+
+| Situação | Cálculo | Pontos Totais |
+|----------|---------|---------------|
+| Ganhou e fez 3 gols | 3 + 3 | **6 pontos** |
+| Ganhou e fez 1 gol | 3 + 1 | **4 pontos** |
+| Ganhou sem gols | 3 + 0 | **3 pontos** |
+| Empatou e fez 2 gols | 1 + 2 | **3 pontos** |
+| Empatou e fez 1 gol | 1 + 1 | **2 pontos** |
+| Empatou sem gols | 1 + 0 | **1 ponto** |
+| Perdeu e fez 2 gols | 0 + 2 | **2 pontos** |
+| Perdeu e fez 1 gol | 0 + 1 | **1 ponto** |
+| Perdeu sem gols | 0 + 0 | **0 pontos** |
+
+**Regras:**
+- ✅ Apenas jogos **CHAMPIONSHIP** e **CUP** contam
+- ❌ Jogos **FRIENDLY** não afetam o ranking
+- ✅ Pontos distribuídos automaticamente ao finalizar jogo
+- ✅ Jogadoras ganham pontos individuais (base + bônus de gols)
+- ✅ Times ganham apenas pontos base (vitória/empate/derrota)
+- ⚽ **Gols contra (own goals) NÃO contam para bônus**
+- 🎯 **Cada gol marcado vale +1 ponto extra APENAS para a jogadora**
+- 👥 **Times NÃO recebem bônus por gols das jogadoras**
+
+---
+
+### 👤 Ranking de Jogadoras
+
+#### **Ver Ranking de uma Jogadora:**
+```http
+GET /api/rankings/players/{playerId}
+```
+
+**Response:**
+```json
+{
+  "id": 1,
+  "playerId": 10,
+  "playerName": "Maria Silva",
+  "playerUsername": "maria_silva",
+  "profilePhotoUrl": "https://...",
+  "totalPoints": 156,
+  "division": "DIAMANTE",
+  "divisionName": "Diamante",
+  "gamesWon": 45,
+  "gamesDrawn": 12,
+  "gamesLost": 8,
+  "totalGames": 65,
+  "winRate": 69.23,
+  "currentStreak": 5,
+  "bestStreak": 12,
+  "globalPosition": 15,
+  "divisionPosition": 3,
+  "pointsToNextDivision": 44,
+  "lastGameDate": "2025-11-20T18:00:00",
+  "createdAt": "2025-01-15T10:00:00",
+  "updatedAt": "2025-11-20T18:00:00"
+}
+```
+
+#### **Ranking Global:**
+```http
+GET /api/rankings/players?page=0&size=50
+```
+
+#### **Ranking por Divisão:**
+```http
+GET /api/rankings/players/division/DIAMANTE?page=0&size=50
+GET /api/rankings/players/division/OURO?page=0&size=50
+```
+
+#### **Top Jogadoras:**
+```http
+GET /api/rankings/players/top?size=10
+```
+
+#### **Melhores Sequências de Vitórias:**
+```http
+GET /api/rankings/players/win-streak?size=10
+```
+
+#### **Maior Taxa de Vitória:**
+```http
+GET /api/rankings/players/win-rate?minGames=10&size=10
+```
+
+---
+
+### 👥 Ranking de Times
+
+#### **Ver Ranking de um Time:**
+```http
+GET /api/rankings/teams/{teamId}
+```
+
+**Response:**
+```json
+{
+  "id": 1,
+  "teamId": 5,
+  "teamName": "Estrelas FC",
+  "leaderName": "Maria Silva",
+  "leaderId": 10,
+  "playersCount": 8,
+  "totalPoints": 189,
+  "division": "DIAMANTE",
+  "divisionName": "Diamante",
+  "gamesWon": 55,
+  "gamesDrawn": 18,
+  "gamesLost": 12,
+  "totalGames": 85,
+  "winRate": 64.71,
+  "currentStreak": 7,
+  "bestStreak": 15,
+  "globalPosition": 8,
+  "divisionPosition": 2,
+  "pointsToNextDivision": 11,
+  "lastGameDate": "2025-11-20T18:00:00",
+  "createdAt": "2025-02-10T14:00:00",
+  "updatedAt": "2025-11-20T18:00:00"
+}
+```
+
+#### **Ranking Global de Times:**
+```http
+GET /api/rankings/teams?page=0&size=50
+```
+
+#### **Ranking por Divisão:**
+```http
+GET /api/rankings/teams/division/MESTRE?page=0&size=50
+```
+
+#### **Top Times:**
+```http
+GET /api/rankings/teams/top?size=10
+```
+
+#### **Melhores Sequências:**
+```http
+GET /api/rankings/teams/win-streak?size=10
+```
+
+#### **Maior Taxa de Vitória:**
+```http
+GET /api/rankings/teams/win-rate?minGames=20&size=10
+```
+
+---
+
+### 📈 Estatísticas Rastreadas
+
+#### **Para Jogadoras e Times:**
+
+| Estatística | Descrição |
+|-------------|-----------|
+| `totalPoints` | Total de pontos acumulados |
+| `division` | Divisão atual (BRONZE a LENDARIA) |
+| `gamesWon` | Total de vitórias |
+| `gamesDrawn` | Total de empates |
+| `gamesLost` | Total de derrotas |
+| `totalGames` | Total de jogos disputados |
+| `winRate` | Taxa de vitória (%) |
+| `currentStreak` | Sequência atual de vitórias |
+| `bestStreak` | Melhor sequência histórica |
+| `globalPosition` | Posição no ranking global |
+| `divisionPosition` | Posição na divisão atual |
+| `pointsToNextDivision` | Pontos faltando para próxima divisão |
+| `lastGameDate` | Data do último jogo |
+
+---
+
+### 🎮 Como Funciona
+
+#### **1. Jogo é Criado:**
+```bash
+POST /api/games/championship
+# Jogo criado com status SCHEDULED
+```
+
+#### **2. Jogadoras Participam:**
+```bash
+POST /api/game-participants/join
+# Jogadoras entram individual ou com time
+```
+
+#### **3. Jogo é Finalizado:**
+```bash
+POST /api/games/123/finish
+{
+  "homeGoals": 3,
+  "awayGoals": 2,
+  "goals": [...]
+}
+# Status muda para FINISHED
+```
+
+#### **4. Pontos Distribuídos Automaticamente:**
+```
+✅ JOGADORAS:
+   - Time vencedor: +3 pontos base + bônus por gols
+   - Time perdedor: 0 pontos base + bônus por gols
+   - Empate: +1 ponto base + bônus por gols
+
+✅ TIMES:
+   - Recebem apenas pontos base (vitória: 3, empate: 1, derrota: 0)
+   - NÃO recebem bônus por gols das jogadoras
+
+✅ Divisões atualizadas automaticamente
+✅ Sequências de vitórias atualizadas
+
+Exemplo de Distribuição:
+JOGADORAS:
+- Maria (Time 1 - vencedor) fez 2 gols: 3 + 2 = 5 pontos
+- Ana (Time 1 - vencedor) fez 0 gols: 3 + 0 = 3 pontos
+- Julia (Time 2 - perdedor) fez 1 gol: 0 + 1 = 1 ponto
+- Carla (Time 2 - perdedor) fez 0 gols: 0 + 0 = 0 pontos
+
+TIMES:
+- Time 1 (vencedor): 3 pontos (sem bônus)
+- Time 2 (perdedor): 0 pontos (sem bônus)
+```
+
+#### **5. Rankings Atualizados:**
+```bash
+GET /api/rankings/players/10
+# Ver novo ranking da jogadora
+
+GET /api/rankings/teams/5
+# Ver novo ranking do time
+```
+
+---
+
+### 💡 Exemplo Completo
+
+```bash
+# 1. Ver ranking atual de Maria
+curl -X GET http://localhost:8080/api/rankings/players/10
+
+# Response: 
+# { "totalPoints": 153, "division": "DIAMANTE", "gamesWon": 44, ... }
+
+# 2. Maria joga e vence um campeonato fazendo 2 gols
+curl -X POST http://localhost:8080/api/games/123/finish \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "homeGoals": 3, 
+    "awayGoals": 1,
+    "goals": [
+      {"playerId": 10, "teamSide": 1, "minute": 23},
+      {"playerId": 10, "teamSide": 1, "minute": 67},
+      {"playerId": 20, "teamSide": 1, "minute": 45},
+      {"playerId": 30, "teamSide": 2, "minute": 80}
+    ]
+  }'
+
+# 3. Ver ranking atualizado
+curl -X GET http://localhost:8080/api/rankings/players/10
+
+# Response:
+# { "totalPoints": 158, "division": "DIAMANTE", "gamesWon": 45, 
+#   "currentStreak": 5, "globalPosition": 15 }
+# Maria ganhou: 3 pontos (vitória) + 2 pontos (2 gols) = 5 pontos totais
+
+# 4. Ver top 10 jogadoras
+curl -X GET http://localhost:8080/api/rankings/players/top?size=10
+
+# 5. Ver ranking da divisão Diamante
+curl -X GET http://localhost:8080/api/rankings/players/division/DIAMANTE
+
+# 6. Ver jogadoras com melhor sequência
+curl -X GET http://localhost:8080/api/rankings/players/win-streak?size=10
+```
+
+---
+
+### 🎯 Regras de Negócio
+
+| Regra | Descrição |
+|-------|-----------|
+| **Criação Automática** | Ranking criado automaticamente ao primeiro jogo |
+| **Apenas Competitivos** | Só CHAMPIONSHIP e CUP contam |
+| **Amistosos Não Contam** | FRIENDLY não afeta ranking |
+| **Distribuição Automática** | Pontos dados ao finalizar jogo |
+| **Divisão Automática** | Promoção/rebaixamento automático |
+| **Sequências** | Streak resetado ao perder |
+| **Times** | Pontos só se participou com time |
+
+---
+
+### 📊 Endpoints Disponíveis
+
+#### **Jogadoras:**
+- `GET /api/rankings/players/{playerId}` - Ranking individual
+- `GET /api/rankings/players` - Ranking global paginado
+- `GET /api/rankings/players/division/{division}` - Por divisão
+- `GET /api/rankings/players/top` - Top jogadoras
+- `GET /api/rankings/players/win-streak` - Melhores sequências
+- `GET /api/rankings/players/win-rate` - Maior taxa de vitória
+
+#### **Times:**
+- `GET /api/rankings/teams/{teamId}` - Ranking individual
+- `GET /api/rankings/teams` - Ranking global paginado
+- `GET /api/rankings/teams/division/{division}` - Por divisão
+- `GET /api/rankings/teams/top` - Top times
+- `GET /api/rankings/teams/win-streak` - Melhores sequências
+- `GET /api/rankings/teams/win-rate` - Maior taxa de vitória
 
 ---
 

@@ -31,6 +31,8 @@ public class GameService {
     private final GameParticipantService gameParticipantService;
     private final UserContextService userContextService;
     private final GameSpectatorRepository gameSpectatorRepository;
+    private final RankingPointsService rankingPointsService;
+    private final GoalRepository goalRepository;
     
     public Page<GameResponse> findAll(Pageable pageable) {
         return gameRepository.findAll(pageable).map(this::convertToResponse);
@@ -248,6 +250,9 @@ public class GameService {
             throw new BusinessException("Only the game host can update this friendly game");
         }
         
+        // Store previous status to check if game just finished
+        Game.GameStatus previousStatus = game.getStatus();
+        
         // Update friendly game fields
         game.setGameName(request.getGameName());
         game.setGameDate(request.getGameDate());
@@ -259,6 +264,9 @@ public class GameService {
         game.setNotes(request.getNotes());
         
         Game savedGame = gameRepository.save(game);
+        
+        // Friendly games don't count for ranking, so no points distribution
+        
         return convertToResponse(savedGame);
     }
     
@@ -277,6 +285,9 @@ public class GameService {
             throw new BusinessException("Only the game host can update this championship game");
         }
         
+        // Store previous status to check if game just finished
+        Game.GameStatus previousStatus = game.getStatus();
+        
         // Update championship game fields
         game.setGameName(request.getGameName());
         game.setGameDate(request.getGameDate());
@@ -288,6 +299,12 @@ public class GameService {
         game.setNotes(request.getNotes());
         
         Game savedGame = gameRepository.save(game);
+        
+        // Distribute ranking points if game just finished (CHAMPIONSHIP counts for ranking)
+        if (previousStatus != Game.GameStatus.FINISHED && savedGame.getStatus() == Game.GameStatus.FINISHED) {
+            rankingPointsService.distributePointsAfterGame(savedGame);
+        }
+        
         return convertToResponse(savedGame);
     }
     
@@ -324,6 +341,9 @@ public class GameService {
             game.setAwayTeam(awayTeam);
         }
         
+        // Store previous status to check if game just finished
+        Game.GameStatus previousStatus = game.getStatus();
+        
         // Update cup game fields
         game.setGameDate(request.getGameDate());
         game.setVenue(request.getVenue());
@@ -335,6 +355,12 @@ public class GameService {
         game.setNotes(request.getNotes());
         
         Game savedGame = gameRepository.save(game);
+        
+        // Distribute ranking points if game just finished (CUP counts for ranking)
+        if (previousStatus != Game.GameStatus.FINISHED && savedGame.getStatus() == Game.GameStatus.FINISHED) {
+            rankingPointsService.distributePointsAfterGame(savedGame);
+        }
+        
         return convertToResponse(savedGame);
     }
     
@@ -390,6 +416,9 @@ public class GameService {
             throw new BusinessException("Away goals cannot be negative");
         }
         
+        // Store previous status to check if game just finished
+        Game.GameStatus previousStatus = game.getStatus();
+        
         game.setHomeGoals(homeGoals);
         game.setAwayGoals(awayGoals);
         
@@ -400,6 +429,12 @@ public class GameService {
         }
         
         Game savedGame = gameRepository.save(game);
+        
+        // Distribute ranking points if game just finished
+        if (previousStatus != Game.GameStatus.FINISHED && savedGame.getStatus() == Game.GameStatus.FINISHED) {
+            rankingPointsService.distributePointsAfterGame(savedGame);
+        }
+        
         return convertToResponse(savedGame);
     }
     
@@ -418,6 +453,78 @@ public class GameService {
     public Page<GameResponse> searchFriendlyAndChampionshipGames(String gameName, Pageable pageable) {
         return gameRepository.findFriendlyAndChampionshipByGameNameContaining(gameName, pageable)
                 .map(this::convertToResponse);
+    }
+    
+    /**
+     * Finaliza um jogo com placar e gols das jogadoras
+     * Apenas o criador do jogo pode finalizá-lo
+     */
+    public GameResponse finishGame(Long gameId, FinishGameRequest request) {
+        Game game = gameRepository.findById(gameId)
+                .orElseThrow(() -> new ResourceNotFoundException("Game", "id", gameId));
+        
+        // Verifica se o jogo já está finalizado
+        if (game.getStatus() == Game.GameStatus.FINISHED) {
+            throw new BusinessException("Game is already finished");
+        }
+        
+        // Valida permissão: apenas o criador pode finalizar
+        UserContextService.UserIdAndType currentUser = userContextService.getCurrentUserIdAndType();
+        if (!game.getHostId().equals(currentUser.getUserId())) {
+            throw new BusinessException("Only the game creator can finish this game");
+        }
+        
+        // Valida que o número de gols bate com a lista de gols
+        if (request.getGoals() != null && !request.getGoals().isEmpty()) {
+            long team1Goals = request.getGoals().stream()
+                    .filter(g -> g.getTeamSide() == 1 && !g.getIsOwnGoal())
+                    .count();
+            long team2Goals = request.getGoals().stream()
+                    .filter(g -> g.getTeamSide() == 2 && !g.getIsOwnGoal())
+                    .count();
+            
+            // Para jogos amistosos/campeonatos: homeGoals = time 1, awayGoals = time 2
+            if (game.isFriendlyOrChampionship()) {
+                if (team1Goals != request.getHomeGoals() || team2Goals != request.getAwayGoals()) {
+                    throw new BusinessException(
+                        String.format("Goal count mismatch. Expected: Team1=%d, Team2=%d. Got: Team1=%d, Team2=%d",
+                            request.getHomeGoals(), request.getAwayGoals(), team1Goals, team2Goals)
+                    );
+                }
+            }
+        }
+        
+        // Atualiza o placar
+        game.setHomeGoals(request.getHomeGoals());
+        game.setAwayGoals(request.getAwayGoals());
+        game.setStatus(Game.GameStatus.FINISHED);
+        if (request.getNotes() != null) {
+            game.setNotes(request.getNotes());
+        }
+        
+        Game savedGame = gameRepository.save(game);
+        
+        // Registra os gols das jogadoras
+        if (request.getGoals() != null && !request.getGoals().isEmpty()) {
+            for (GoalRequest goalRequest : request.getGoals()) {
+                Player player = playerRepository.findById(goalRequest.getPlayerId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Player", "id", goalRequest.getPlayerId()));
+                
+                Goal goal = new Goal();
+                goal.setGame(savedGame);
+                goal.setPlayer(player);
+                goal.setTeamSide(goalRequest.getTeamSide());
+                goal.setMinute(goalRequest.getMinute());
+                goal.setIsOwnGoal(goalRequest.getIsOwnGoal() != null ? goalRequest.getIsOwnGoal() : false);
+                
+                goalRepository.save(goal);
+            }
+        }
+        
+        // Distribui pontos de ranking (apenas para CHAMPIONSHIP e CUP)
+        rankingPointsService.distributePointsAfterGame(savedGame);
+        
+        return convertToResponse(savedGame);
     }
     
     private GameResponse convertToResponse(Game game) {
