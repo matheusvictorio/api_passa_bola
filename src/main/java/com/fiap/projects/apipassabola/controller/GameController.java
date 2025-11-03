@@ -7,6 +7,7 @@ import com.fiap.projects.apipassabola.dto.request.CupGameRequest;
 import com.fiap.projects.apipassabola.dto.request.FriendlyGameUpdateRequest;
 import com.fiap.projects.apipassabola.dto.request.ChampionshipGameUpdateRequest;
 import com.fiap.projects.apipassabola.dto.request.CupGameUpdateRequest;
+import com.fiap.projects.apipassabola.dto.request.FinishGameRequest;
 import com.fiap.projects.apipassabola.dto.response.GameResponse;
 import com.fiap.projects.apipassabola.entity.Game;
 import com.fiap.projects.apipassabola.entity.GameType;
@@ -170,5 +171,19 @@ public class GameController {
             @RequestParam Integer awayGoals) {
         GameResponse updatedGame = gameService.updateScore(id, homeGoals, awayGoals);
         return ResponseEntity.ok(updatedGame);
+    }
+    
+    /**
+     * Finaliza um jogo com placar e gols das jogadoras
+     * Apenas o criador do jogo pode finalizá-lo
+     * POST /api/games/{id}/finish
+     */
+    @PostMapping("/{id}/finish")
+    @PreAuthorize("hasRole('ORGANIZATION') or hasRole('PLAYER')")
+    public ResponseEntity<GameResponse> finishGame(
+            @PathVariable Long id,
+            @Valid @RequestBody FinishGameRequest request) {
+        GameResponse finishedGame = gameService.finishGame(id, request);
+        return ResponseEntity.ok(finishedGame);
     }
 }
