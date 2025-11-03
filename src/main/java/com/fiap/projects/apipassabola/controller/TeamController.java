@@ -136,6 +136,17 @@ public class TeamController {
         return ResponseEntity.ok(response);
     }
     
+    // Get all teams that the current player belongs to
+    @GetMapping("/my-teams")
+    @PreAuthorize("hasRole('PLAYER')")
+    public ResponseEntity<List<TeamResponse>> getMyTeams() {
+        List<Team> teams = teamService.getMyTeams();
+        List<TeamResponse> response = teams.stream()
+                .map(teamService::convertToResponse)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
+    }
+    
     // Leave team (authenticated player)
     @PostMapping("/{teamId}/leave")
     @PreAuthorize("hasRole('PLAYER')")

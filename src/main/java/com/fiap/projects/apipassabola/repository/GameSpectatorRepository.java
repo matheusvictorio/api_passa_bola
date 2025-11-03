@@ -3,6 +3,7 @@ package com.fiap.projects.apipassabola.repository;
 import com.fiap.projects.apipassabola.entity.GameSpectator;
 import com.fiap.projects.apipassabola.entity.Game;
 import com.fiap.projects.apipassabola.entity.Spectator;
+import com.fiap.projects.apipassabola.entity.UserType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -35,10 +36,27 @@ public interface GameSpectatorRepository extends JpaRepository<GameSpectator, Lo
     // Find spectators by game and status
     List<GameSpectator> findByGameIdAndStatus(Long gameId, GameSpectator.SpectatorStatus status);
     
-    // Check if spectator is already subscribed to a game
+    // ========== UNIVERSAL WATCHER QUERIES (Players + Spectators) ==========
+    
+    // Check if watcher (Player or Spectator) is already subscribed to a game
+    boolean existsByGameIdAndWatcherIdAndWatcherType(Long gameId, Long watcherId, UserType watcherType);
+    
+    // Find specific subscription by watcher
+    Optional<GameSpectator> findByGameIdAndWatcherIdAndWatcherType(Long gameId, Long watcherId, UserType watcherType);
+    
+    // Find all games a watcher is subscribed to
+    List<GameSpectator> findByWatcherIdAndWatcherType(Long watcherId, UserType watcherType);
+    Page<GameSpectator> findByWatcherIdAndWatcherType(Long watcherId, UserType watcherType, Pageable pageable);
+    
+    // Count watchers by game
+    long countByGameIdAndWatcherType(Long gameId, UserType watcherType);
+    
+    // ========== LEGACY QUERIES (Backward Compatibility) ==========
+    
+    // Check if spectator is already subscribed to a game (legacy)
     boolean existsByGameIdAndSpectatorId(Long gameId, Long spectatorId);
     
-    // Find specific subscription
+    // Find specific subscription (legacy)
     Optional<GameSpectator> findByGameIdAndSpectatorId(Long gameId, Long spectatorId);
     
     // Count spectators by game

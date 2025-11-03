@@ -330,6 +330,12 @@ public class TeamService {
         return teamInviteRepository.findPendingInvitesByTeamId(teamId);
     }
     
+    // Get all teams that the current player belongs to
+    public List<Team> getMyTeams() {
+        Player currentPlayer = userContextService.getCurrentPlayer();
+        return teamRepository.findTeamsByPlayerId(currentPlayer.getId());
+    }
+    
     // Helper method to check mutual following
     private boolean areMutuallyFollowing(Player player1, Player player2) {
         // Check if player1 follows player2 AND player2 follows player1
