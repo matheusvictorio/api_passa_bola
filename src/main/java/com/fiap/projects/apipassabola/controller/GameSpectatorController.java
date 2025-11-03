@@ -21,20 +21,20 @@ public class GameSpectatorController {
     private final GameSpectatorService gameSpectatorService;
     
     /**
-     * POST /api/games/{id}/spectate - Confirmar presença como espectador
+     * POST /api/games/{id}/spectate - Confirmar presença como observador (Player ou Spectator)
      */
     @PostMapping("/{id}/spectate")
-    @PreAuthorize("hasRole('SPECTATOR')")
+    @PreAuthorize("hasRole('PLAYER') or hasRole('SPECTATOR')")
     public ResponseEntity<GameSpectatorResponse> joinGameAsSpectator(@PathVariable Long id) {
         GameSpectatorResponse response = gameSpectatorService.joinGame(id);
         return ResponseEntity.ok(response);
     }
     
     /**
-     * DELETE /api/games/{id}/spectate - Cancelar presença como espectador
+     * DELETE /api/games/{id}/spectate - Cancelar presença como observador (Player ou Spectator)
      */
     @DeleteMapping("/{id}/spectate")
-    @PreAuthorize("hasRole('SPECTATOR')")
+    @PreAuthorize("hasRole('PLAYER') or hasRole('SPECTATOR')")
     public ResponseEntity<Void> leaveGameAsSpectator(@PathVariable Long id) {
         gameSpectatorService.leaveGame(id);
         return ResponseEntity.noContent().build();
@@ -59,20 +59,20 @@ public class GameSpectatorController {
     }
     
     /**
-     * GET /api/games/{id}/spectators/is-subscribed - Verificar se está inscrito
+     * GET /api/games/{id}/spectators/is-subscribed - Verificar se está inscrito (Player ou Spectator)
      */
     @GetMapping("/{id}/spectators/is-subscribed")
-    @PreAuthorize("hasRole('SPECTATOR')")
+    @PreAuthorize("hasRole('PLAYER') or hasRole('SPECTATOR')")
     public ResponseEntity<Boolean> isSubscribed(@PathVariable Long id) {
         boolean subscribed = gameSpectatorService.isSubscribed(id);
         return ResponseEntity.ok(subscribed);
     }
     
     /**
-     * GET /api/games/spectators/my-subscriptions - Meus jogos inscritos
+     * GET /api/games/spectators/my-subscriptions - Meus jogos inscritos (Player ou Spectator)
      */
     @GetMapping("/spectators/my-subscriptions")
-    @PreAuthorize("hasRole('SPECTATOR')")
+    @PreAuthorize("hasRole('PLAYER') or hasRole('SPECTATOR')")
     public ResponseEntity<Page<GameSpectatorResponse>> getMySubscriptions(
             @PageableDefault(size = 20) Pageable pageable) {
         Page<GameSpectatorResponse> subscriptions = gameSpectatorService.getMySubscribedGames(pageable);
