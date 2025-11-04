@@ -8,7 +8,7 @@ import com.fiap.projects.apipassabola.entity.*;
 import com.fiap.projects.apipassabola.exception.BusinessException;
 import com.fiap.projects.apipassabola.exception.ResourceNotFoundException;
 import com.fiap.projects.apipassabola.repository.*;
-import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -19,8 +19,8 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class GameService {
     
     private final GameRepository gameRepository;
@@ -33,6 +33,33 @@ public class GameService {
     private final GameSpectatorRepository gameSpectatorRepository;
     private final RankingPointsService rankingPointsService;
     private final GoalRepository goalRepository;
+    
+    private final TournamentService tournamentService; // Lazy injection para evitar dependência circular
+    
+    // Construtor customizado para injeção lazy
+    public GameService(GameRepository gameRepository,
+                      OrganizationRepository organizationRepository,
+                      PlayerRepository playerRepository,
+                      TeamRepository teamRepository,
+                      OrganizationService organizationService,
+                      GameParticipantService gameParticipantService,
+                      UserContextService userContextService,
+                      GameSpectatorRepository gameSpectatorRepository,
+                      RankingPointsService rankingPointsService,
+                      GoalRepository goalRepository,
+                      @org.springframework.context.annotation.Lazy TournamentService tournamentService) {
+        this.gameRepository = gameRepository;
+        this.organizationRepository = organizationRepository;
+        this.playerRepository = playerRepository;
+        this.teamRepository = teamRepository;
+        this.organizationService = organizationService;
+        this.gameParticipantService = gameParticipantService;
+        this.userContextService = userContextService;
+        this.gameSpectatorRepository = gameSpectatorRepository;
+        this.rankingPointsService = rankingPointsService;
+        this.goalRepository = goalRepository;
+        this.tournamentService = tournamentService;
+    }
     
     public Page<GameResponse> findAll(Pageable pageable) {
         return gameRepository.findAll(pageable).map(this::convertToResponse);
@@ -233,6 +260,36 @@ public class GameService {
         
         Game savedGame = gameRepository.save(game);
         return convertToResponse(savedGame);
+    }
+    
+    /**
+     * Cria um jogo de torneio automaticamente
+     * Usado pelo sistema de torneios para criar jogos das partidas do bracket
+     */
+    public Game createTournamentGame(Team team1, Team team2, String venue, LocalDateTime gameDate, 
+                                     String tournamentName, String round, Long creatorId) {
+        // Para jogos de torneio, usamos o tipo CHAMPIONSHIP
+        // Isso permite que o sistema de ranking e pontos funcione corretamente
+        Game game = new Game();
+        game.setGameType(GameType.CHAMPIONSHIP);
+        game.setGameName(tournamentName + " - " + round);
+        game.setGameDate(gameDate);
+        game.setVenue(venue);
+        game.setChampionship(tournamentName);
+        game.setRound(round);
+        game.setDescription("Partida do torneio " + tournamentName);
+        game.setStatus(Game.GameStatus.SCHEDULED);
+        game.setHomeGoals(0);
+        game.setAwayGoals(0);
+        game.setHostId(creatorId);
+        
+        // Configurações padrão para jogos de torneio
+        game.setHasSpectators(true);
+        game.setMaxSpectators(100);
+        game.setMinPlayers(10); // 5x5
+        game.setMaxPlayers(22); // 11x11
+        
+        return gameRepository.save(game);
     }
     
     public GameResponse updateFriendlyGame(Long id, FriendlyGameUpdateRequest request) {
@@ -523,6 +580,17 @@ public class GameService {
         
         // Distribui pontos de ranking (apenas para CHAMPIONSHIP e CUP)
         rankingPointsService.distributePointsAfterGame(savedGame);
+        
+        // Sincroniza resultado com torneio (se o jogo faz parte de um torneio)
+        if (tournamentService != null) {
+            try {
+                tournamentService.syncGameResultToMatch(savedGame.getId(), 
+                    savedGame.getHomeGoals(), savedGame.getAwayGoals());
+            } catch (Exception e) {
+                // Não falha se não houver torneio associado
+                log.debug("Jogo {} não está associado a nenhum torneio", savedGame.getId());
+            }
+        }
         
         return convertToResponse(savedGame);
     }
