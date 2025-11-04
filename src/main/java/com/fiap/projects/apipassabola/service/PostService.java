@@ -3,6 +3,7 @@ package com.fiap.projects.apipassabola.service;
 import com.fiap.projects.apipassabola.dto.request.PostRequest;
 import com.fiap.projects.apipassabola.dto.response.PostResponse;
 import com.fiap.projects.apipassabola.dto.response.PostLikeResponse;
+import com.fiap.projects.apipassabola.dto.response.PostCommentResponse;
 import com.fiap.projects.apipassabola.entity.*;
 import com.fiap.projects.apipassabola.exception.BusinessException;
 import com.fiap.projects.apipassabola.exception.ResourceNotFoundException;
@@ -27,6 +28,7 @@ public class PostService {
     private final SpectatorRepository spectatorRepository;
     private final UserContextService userContextService;
     private final PostLikeService postLikeService;
+    private final PostCommentService postCommentService;
     
     public Page<PostResponse> findAll(Pageable pageable) {
         return postRepository.findAll(pageable).map(this::convertToResponse);
@@ -232,6 +234,22 @@ public class PostService {
             response.setIsLikedByCurrentUser(false);
             response.setRecentLikes(List.of());
             response.setTotalLikes((long) post.getLikes());
+        }
+        
+        // Add comment information for frontend
+        try {
+            // Get recent comments (last 3 for UI display)
+            List<PostCommentResponse> recentComments = postCommentService.getRecentCommentsByPost(post.getId(), 3);
+            response.setRecentComments(recentComments);
+            
+            // Get total comments count
+            Long totalComments = postCommentService.getCommentCount(post.getId());
+            response.setTotalComments(totalComments);
+            
+        } catch (Exception e) {
+            // Error fetching comments - set default values
+            response.setRecentComments(List.of());
+            response.setTotalComments((long) post.getComments());
         }
         
         return response;
