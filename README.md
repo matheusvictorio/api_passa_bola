@@ -11,6 +11,7 @@
 - [🏁 Finalização de Jogos](#-finalização-de-jogos)
 - [🏆 Sistema de Ranking e Pontos](#-sistema-de-ranking-e-pontos)
 - [👥 Sistema de Times](#-sistema-de-times)
+- [🏆 Sistema de Torneios e Chaveamento](#-sistema-de-torneios-e-chaveamento)
 - [🤝 Sistema de Seguimento](#-sistema-de-seguimento)
 - [📝 Sistema de Posts](#-sistema-de-posts)
 - [💬 Sistema de Chat](#-sistema-de-chat)
@@ -1433,6 +1434,383 @@ GET /api/teams/{id}
 # Buscar por nome
 GET /api/teams/search?name=Estrelas&page=0&size=20
 ```
+
+---
+
+## 🏆 Sistema de Torneios e Chaveamento
+
+### Características
+- **Chaveamento obrigatório** para jogos de **COPA** (criados por ORGANIZATION)
+- **Chaveamento opcional** para jogos de **CAMPEONATO** (criados por PLAYER)
+- Geração **automática e aleatória** de chaves
+- Suporte para **4, 8, 16, 32+ times** (potências de 2)
+- Avanço automático de vencedores entre rodadas
+- Sistema de **eliminação simples**
+
+### Tipos de Torneios
+
+| Tipo | Criador | Chaveamento | Descrição |
+|------|---------|-------------|-----------|
+| **CUP** | ORGANIZATION | Obrigatório | Torneios oficiais de copa com chaveamento automático |
+| **CHAMPIONSHIP** | PLAYER | Opcional | Campeonatos organizados por jogadoras |
+
+### Criar Torneio
+
+#### Copa (Organization)
+```http
+POST /api/tournaments
+Authorization: Bearer <token_organization>
+Content-Type: application/json
+
+{
+  "name": "Copa Passa Bola 2025",
+  "gameType": "CUP",
+  "description": "Torneio oficial de futebol feminino",
+  "venue": "Estádio Municipal",
+  "startDate": "2025-12-01T10:00:00",
+  "maxTeams": 8
+}
+```
+
+#### Campeonato (Player)
+```http
+POST /api/tournaments
+Authorization: Bearer <token_player>
+Content-Type: application/json
+
+{
+  "name": "Campeonato Regional",
+  "gameType": "CHAMPIONSHIP",
+  "description": "Campeonato entre times locais",
+  "venue": "Campo do Bairro",
+  "startDate": "2025-11-15T14:00:00",
+  "maxTeams": 16
+}
+```
+
+**Response:**
+```json
+{
+  "id": 1,
+  "name": "Copa Passa Bola 2025",
+  "gameType": "CUP",
+  "creatorId": 5,
+  "creatorUsername": "liga_futebol",
+  "status": "REGISTRATION",
+  "description": "Torneio oficial de futebol feminino",
+  "venue": "Estádio Municipal",
+  "startDate": "2025-12-01T10:00:00",
+  "totalTeams": 0,
+  "maxTeams": 8,
+  "bracketGenerated": false,
+  "createdAt": "2025-11-04T00:00:00"
+}
+```
+
+### Inscrever Time no Torneio
+```http
+POST /api/tournaments/{tournamentId}/register/{teamId}
+Authorization: Bearer <token_player>
+```
+
+**Validações:**
+- ✅ Apenas **líderes de times** podem inscrever
+- ✅ Torneio deve estar em período de **inscrição**
+- ✅ Não pode exceder **número máximo de times**
+- ✅ Time não pode estar já inscrito
+
+**Response:**
+```json
+{
+  "id": 1,
+  "tournamentId": 1,
+  "teamId": 10,
+  "teamName": "Estrelas FC",
+  "seedPosition": null,
+  "status": "REGISTERED",
+  "registeredAt": "2025-11-04T00:10:00"
+}
+```
+
+### Gerar Chaveamento
+```http
+POST /api/tournaments/{tournamentId}/generate-bracket
+Authorization: Bearer <token_creator>
+```
+
+**Validações:**
+- ✅ Apenas o **criador** pode gerar
+- ✅ Número de times deve ser **potência de 2** (2, 4, 8, 16, 32...)
+- ✅ Mínimo de **2 times** inscritos
+- ✅ Chaveamento ainda não gerado
+
+**Processo:**
+1. 🎲 Times são **embaralhados aleatoriamente**
+2. 📊 Posições de seed são atribuídas (1, 2, 3, 4...)
+3. 🏆 Todas as rodadas são criadas automaticamente
+4. 🔗 Partidas são conectadas (vencedor avança)
+
+**Rodadas Geradas:**
+
+| Times | Rodadas Criadas |
+|-------|-----------------|
+| 2 | FINAL |
+| 4 | SEMI → FINAL |
+| 8 | QUARTER → SEMI → FINAL |
+| 16 | ROUND_OF_16 → QUARTER → SEMI → FINAL |
+| 32 | ROUND_OF_32 → ROUND_OF_16 → QUARTER → SEMI → FINAL |
+
+**Response:**
+```json
+{
+  "id": 1,
+  "name": "Copa Passa Bola 2025",
+  "status": "BRACKET_READY",
+  "totalTeams": 8,
+  "currentRound": "QUARTER",
+  "bracketGenerated": true,
+  "teams": [...],
+  "matches": [
+    {
+      "id": 1,
+      "round": "QUARTER",
+      "matchNumber": 1,
+      "team1Id": 10,
+      "team1Name": "Estrelas FC",
+      "team2Id": 15,
+      "team2Name": "Vitória SC",
+      "status": "SCHEDULED",
+      "bracketPosition": 0,
+      "nextMatchId": 5
+    },
+    ...
+  ]
+}
+```
+
+### Atualizar Resultado de Partida
+```http
+PATCH /api/tournaments/matches/{matchId}/result
+Authorization: Bearer <token_creator>
+Content-Type: application/json
+
+{
+  "team1Score": 3,
+  "team2Score": 1
+}
+```
+
+**Comportamento:**
+1. ✅ Resultado é registrado
+2. 🏆 Vencedor é determinado automaticamente
+3. ⬆️ Vencedor **avança para próxima rodada**
+4. 🎯 Próxima partida fica **SCHEDULED** quando ambos os times estão definidos
+5. 🏁 Torneio é **finalizado** quando a final termina
+
+**Response:**
+```json
+{
+  "id": 1,
+  "tournamentId": 1,
+  "round": "QUARTER",
+  "matchNumber": 1,
+  "team1Id": 10,
+  "team1Name": "Estrelas FC",
+  "team1Score": 3,
+  "team2Id": 15,
+  "team2Name": "Vitória SC",
+  "team2Score": 1,
+  "winnerId": 10,
+  "winnerName": "Estrelas FC",
+  "status": "FINISHED",
+  "nextMatchId": 5
+}
+```
+
+### Consultar Torneios
+
+#### Listar Todos
+```http
+GET /api/tournaments?page=0&size=20
+```
+
+#### Buscar por ID (com detalhes completos)
+```http
+GET /api/tournaments/{id}
+```
+
+#### Filtrar por Tipo
+```http
+GET /api/tournaments/type/CUP
+GET /api/tournaments/type/CHAMPIONSHIP
+```
+
+#### Torneios Abertos para Inscrição
+```http
+GET /api/tournaments/open
+```
+
+### Consultar Times do Torneio
+```http
+GET /api/tournaments/{tournamentId}/teams
+```
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "tournamentId": 1,
+    "teamId": 10,
+    "teamName": "Estrelas FC",
+    "seedPosition": 1,
+    "status": "CONFIRMED",
+    "registeredAt": "2025-11-04T00:10:00"
+  },
+  ...
+]
+```
+
+### Consultar Partidas
+
+#### Todas as Partidas do Torneio
+```http
+GET /api/tournaments/{tournamentId}/matches
+```
+
+#### Partidas de uma Rodada Específica
+```http
+GET /api/tournaments/{tournamentId}/matches/round/QUARTER
+GET /api/tournaments/{tournamentId}/matches/round/SEMI
+GET /api/tournaments/{tournamentId}/matches/round/FINAL
+```
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "tournamentId": 1,
+    "round": "QUARTER",
+    "matchNumber": 1,
+    "team1Id": 10,
+    "team1Name": "Estrelas FC",
+    "team1Score": 3,
+    "team2Id": 15,
+    "team2Name": "Vitória SC",
+    "team2Score": 1,
+    "winnerId": 10,
+    "winnerName": "Estrelas FC",
+    "status": "FINISHED",
+    "bracketPosition": 0,
+    "nextMatchId": 5,
+    "scheduledDate": "2025-12-01T10:00:00"
+  },
+  ...
+]
+```
+
+### Status do Torneio
+
+| Status | Descrição |
+|--------|-----------|
+| **REGISTRATION** | Período de inscrição de times |
+| **BRACKET_READY** | Chaveamento gerado, aguardando início |
+| **IN_PROGRESS** | Torneio em andamento |
+| **FINISHED** | Torneio finalizado |
+| **CANCELLED** | Torneio cancelado |
+
+### Status das Partidas
+
+| Status | Descrição |
+|--------|-----------|
+| **PENDING** | Aguardando times (depende de partidas anteriores) |
+| **SCHEDULED** | Times definidos, aguardando jogo |
+| **IN_PROGRESS** | Jogo em andamento |
+| **FINISHED** | Jogo finalizado |
+| **WALKOVER** | W.O. (um time não compareceu) |
+
+### Status dos Times no Torneio
+
+| Status | Descrição |
+|--------|-----------|
+| **REGISTERED** | Time inscrito |
+| **CONFIRMED** | Inscrição confirmada (após geração do chaveamento) |
+| **ELIMINATED** | Eliminado do torneio |
+| **CHAMPION** | Campeão 🏆 |
+| **RUNNER_UP** | Vice-campeão 🥈 |
+| **WITHDRAWN** | Desistiu |
+
+### Fluxo Completo de um Torneio
+
+```mermaid
+graph TD
+    A[Criar Torneio] --> B[Times se Inscrevem]
+    B --> C{Número de Times OK?}
+    C -->|Não| B
+    C -->|Sim| D[Gerar Chaveamento]
+    D --> E[Partidas Criadas]
+    E --> F[Atualizar Resultados]
+    F --> G{Rodada Completa?}
+    G -->|Não| F
+    G -->|Sim| H{É a Final?}
+    H -->|Não| I[Avançar Vencedores]
+    I --> F
+    H -->|Sim| J[Torneio Finalizado]
+    J --> K[Campeão Definido 🏆]
+```
+
+### Exemplo Prático: Torneio de 8 Times
+
+1. **Criar torneio** (maxTeams: 8)
+2. **8 times se inscrevem**
+3. **Gerar chaveamento** → Cria automaticamente:
+   - 4 partidas das QUARTAS (QUARTER)
+   - 2 partidas das SEMIS (SEMI)
+   - 1 partida da FINAL (FINAL)
+   - **4 jogos criados automaticamente** para as quartas
+4. **Finalizar jogos** das quartas usando `POST /api/games/{gameId}/finish`
+   - Pontos de ranking distribuídos
+   - Vencedores avançam automaticamente
+   - **2 jogos das semis criados automaticamente**
+5. **Finalizar jogos** das semis
+   - **1 jogo da final criado automaticamente**
+6. **Finalizar jogo** da final → Campeão definido! 🏆
+
+### Integração com Sistema de Jogos
+
+**Cada partida do torneio cria automaticamente um `Game`:**
+- ✅ Jogadoras podem participar normalmente
+- ✅ Sistema de gols e estatísticas funciona
+- ✅ **Pontos de ranking são distribuídos automaticamente**
+- ✅ Espectadores podem assistir
+- ✅ Resultado sincroniza com o bracket do torneio
+
+**Para finalizar uma partida do torneio:**
+```http
+POST /api/games/{gameId}/finish
+Authorization: Bearer <token_creator>
+Content-Type: application/json
+
+{
+  "homeGoals": 3,
+  "awayGoals": 1,
+  "goals": [
+    {"playerId": 10, "teamSide": 1, "minute": 15},
+    {"playerId": 12, "teamSide": 1, "minute": 34},
+    {"playerId": 10, "teamSide": 1, "minute": 67},
+    {"playerId": 25, "teamSide": 2, "minute": 89}
+  ]
+}
+```
+
+**O que acontece automaticamente:**
+1. Jogo finalizado
+2. Gols registrados
+3. Pontos distribuídos
+4. Resultado sincronizado com torneio
+5. Vencedor avança
+6. Próximo jogo criado
 
 ---
 
