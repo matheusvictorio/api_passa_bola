@@ -32,4 +32,8 @@ public class PostResponse {
     private Boolean isLikedByCurrentUser;
     private List<PostLikeResponse> recentLikes; // Last few users who liked (for UI display)
     private Long totalLikes; // Total count of likes
+    
+    // Comment information for frontend
+    private List<PostCommentResponse> recentComments; // Last few comments (for UI display)
+    private Long totalComments; // Total count of comments
 }

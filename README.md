@@ -1538,7 +1538,8 @@ Authorization: Bearer <token>
 ### Características
 - **Todos os usuários** autenticados podem criar posts
 - Sistema de likes com rastreamento individual
-- Informações de quem curtiu
+- **Sistema de comentários completo**
+- Informações de quem curtiu e comentou
 - Suporte a imagens e diferentes tipos
 
 ### Criar Post
@@ -1575,6 +1576,8 @@ Content-Type: application/json
   "totalLikes": 0,
   "isLikedByCurrentUser": false,
   "recentLikes": [],
+  "totalComments": 0,
+  "recentComments": [],
   "createdAt": "2025-10-06T23:00:00"
 }
 ```
@@ -1694,6 +1697,188 @@ GET /api/posts/role/SPECTATOR?page=0&size=20
 # Meus posts curtidos
 GET /api/post-likes/my-likes?page=0&size=20
 Authorization: Bearer <token>
+```
+
+### 💬 Sistema de Comentários em Posts
+
+#### Criar Comentário
+```http
+POST /api/post-comments/post/{postId}
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "content": "Ótimo treino! Parabéns pelo desempenho! 👏"
+}
+```
+
+**Response:**
+```json
+{
+  "id": 1,
+  "postId": 1,
+  "userId": 20,
+  "userUsername": "ana_costa",
+  "userName": "Ana Costa",
+  "userType": "PLAYER",
+  "content": "Ótimo treino! Parabéns pelo desempenho! 👏",
+  "isOwnedByCurrentUser": true,
+  "createdAt": "2025-10-06T23:10:00",
+  "updatedAt": "2025-10-06T23:10:00"
+}
+```
+
+> **💡 Nota:** Informações do usuário são extraídas automaticamente do JWT token.
+
+#### Atualizar Comentário
+```http
+PUT /api/post-comments/{commentId}
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "content": "Ótimo treino! Parabéns pelo excelente desempenho! 👏⚽"
+}
+```
+
+> **🔒 Validação:** Apenas o **autor do comentário** pode atualizar
+
+#### Deletar Comentário
+```http
+DELETE /api/post-comments/{commentId}
+Authorization: Bearer <token>
+```
+
+> **🔒 Validação:** Apenas o **autor do comentário** pode deletar
+
+#### Listar Comentários de um Post
+```http
+GET /api/post-comments/post/{postId}?page=0&size=20
+```
+
+**Response:**
+```json
+{
+  "content": [
+    {
+      "id": 1,
+      "postId": 1,
+      "userId": 20,
+      "userUsername": "ana_costa",
+      "userName": "Ana Costa",
+      "userType": "PLAYER",
+      "content": "Ótimo treino! Parabéns pelo desempenho! 👏",
+      "isOwnedByCurrentUser": false,
+      "createdAt": "2025-10-06T23:10:00",
+      "updatedAt": "2025-10-06T23:10:00"
+    },
+    {
+      "id": 2,
+      "postId": 1,
+      "userId": 30,
+      "userUsername": "clube_sp",
+      "userName": "Clube São Paulo",
+      "userType": "ORGANIZATION",
+      "content": "Continue assim! Estamos orgulhosos! 💪",
+      "isOwnedByCurrentUser": false,
+      "createdAt": "2025-10-06T23:12:00",
+      "updatedAt": "2025-10-06T23:12:00"
+    }
+  ],
+  "totalElements": 15,
+  "totalPages": 1
+}
+```
+
+#### Ver Comentários Recentes (UI)
+```http
+GET /api/post-comments/post/{postId}/recent?limit=5
+```
+
+**Response:** Lista dos últimos 5 comentários (para exibição em UI)
+
+#### Meus Comentários
+```http
+GET /api/post-comments/my-comments?page=0&size=20
+Authorization: Bearer <token>
+```
+
+#### Contagem de Comentários
+```http
+GET /api/post-comments/post/{postId}/count
+```
+
+**Response:**
+```json
+15
+```
+
+#### Verificar se Comentou
+```http
+GET /api/post-comments/post/{postId}/has-commented
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+true
+```
+
+### 📊 Informações Automáticas em Posts
+
+Quando você busca posts (GET /api/posts ou GET /api/posts/{id}), a resposta inclui automaticamente:
+
+**Informações de Likes:**
+- `isLikedByCurrentUser`: Boolean - se o usuário atual curtiu
+- `recentLikes`: Lista dos últimos 3 usuários que curtiram
+- `totalLikes`: Contagem total de likes
+
+**Informações de Comentários:**
+- `recentComments`: Lista dos últimos 3 comentários
+- `totalComments`: Contagem total de comentários
+
+**Exemplo de Response Completo:**
+```json
+{
+  "id": 1,
+  "authorId": 10,
+  "authorUsername": "maria_silva",
+  "authorName": "Maria Silva",
+  "content": "Preparando para o próximo treino! 💪⚽",
+  "imageUrl": "https://example.com/treino.jpg",
+  "type": "GENERAL",
+  "likes": 45,
+  "comments": 15,
+  "shares": 8,
+  "isLikedByCurrentUser": true,
+  "totalLikes": 45,
+  "recentLikes": [
+    {
+      "id": 1,
+      "userId": 20,
+      "userUsername": "ana_costa",
+      "userName": "Ana Costa",
+      "userType": "PLAYER",
+      "createdAt": "2025-10-06T23:05:00"
+    }
+  ],
+  "totalComments": 15,
+  "recentComments": [
+    {
+      "id": 1,
+      "postId": 1,
+      "userId": 20,
+      "userUsername": "ana_costa",
+      "userName": "Ana Costa",
+      "userType": "PLAYER",
+      "content": "Ótimo treino! 👏",
+      "isOwnedByCurrentUser": false,
+      "createdAt": "2025-10-06T23:10:00"
+    }
+  ],
+  "createdAt": "2025-10-06T23:00:00",
+  "updatedAt": "2025-10-06T23:00:00"
+}
 ```
 
 ---
