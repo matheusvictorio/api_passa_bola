@@ -49,31 +49,45 @@ public class ChatController {
             log.info("💾 [WebSocket] Message saved to DB: id={}, senderId={}, recipientId={}", 
                     response.getId(), response.getSenderId(), response.getRecipientId());
             
-            // Get recipient email (Spring WebSocket uses email as user identifier)
+            // Get recipient and sender emails (Spring WebSocket uses email as user identifier)
             var recipient = universalUserService.findByUserId(request.getRecipientId());
+            var sender = universalUserService.findByUserId(response.getSenderId());
             String recipientEmail = recipient.email;
+            String senderEmail = sender.email;
             
             String destination = "/queue/messages";
             
-            log.info("📤 [WebSocket] Attempting to send to user: email={}, destination={}", 
+            log.info("📤 [WebSocket] Attempting to send to recipient: email={}, destination={}", 
                     recipientEmail, destination);
+            log.info("📤 [WebSocket] Attempting to send to sender: email={}, destination={}", 
+                    senderEmail, destination);
             log.info("📦 [WebSocket] Message payload: {}", response);
             
-            // CRITICAL: Use EMAIL not ID - Spring WebSocket identifies users by email (authentication.getName())
+            // CRITICAL: Send to BOTH sender and recipient
             try {
+                // Send to recipient
                 messagingTemplate.convertAndSendToUser(
-                        recipientEmail,  // <-- CHANGED: Use email instead of ID
+                        recipientEmail,
                         destination,
                         response
                 );
-                log.info("✅ [WebSocket] convertAndSendToUser() completed for email: {}", recipientEmail);
+                log.info("✅ [WebSocket] Message sent to recipient: {}", recipientEmail);
+                
+                // Send to sender (so they see their own message)
+                messagingTemplate.convertAndSendToUser(
+                        senderEmail,
+                        destination,
+                        response
+                );
+                log.info("✅ [WebSocket] Message sent to sender: {}", senderEmail);
+                
             } catch (Exception sendEx) {
                 log.error("❌ [WebSocket] Exception in convertAndSendToUser(): {}", sendEx.getMessage(), sendEx);
                 throw sendEx;
             }
             
-            log.info("✅ [WebSocket] Message sent successfully from {} to {} (email: {})", 
-                    response.getSenderId(), response.getRecipientId(), recipientEmail);
+            log.info("✅ [WebSocket] Message sent successfully from {} (email: {}) to {} (email: {})", 
+                    response.getSenderId(), senderEmail, response.getRecipientId(), recipientEmail);
                     
         } catch (Exception e) {
             log.error("❌ [WebSocket] Error sending message: {}", e.getMessage(), e);
@@ -92,12 +106,21 @@ public class ChatController {
         try {
             ChatMessageResponse response = chatMessageService.sendMessage(request);
             
-            // Also send via WebSocket if available
+            // Also send via WebSocket if available (to both sender and recipient)
             try {
                 var recipient = universalUserService.findByUserId(request.getRecipientId());
+                var sender = universalUserService.findByUserId(response.getSenderId());
                 
+                // Send to recipient
                 messagingTemplate.convertAndSendToUser(
-                        recipient.email,  // Use email instead of ID
+                        recipient.email,
+                        "/queue/messages",
+                        response
+                );
+                
+                // Send to sender (so they see their own message)
+                messagingTemplate.convertAndSendToUser(
+                        sender.email,
                         "/queue/messages",
                         response
                 );
