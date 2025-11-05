@@ -59,8 +59,9 @@ public class ChatMessageService {
         message.setIsRead(false);
         
         ChatMessage savedMessage = chatMessageRepository.save(message);
-        log.info("Message sent from {} ({}) to {} ({})", 
-                sender.userId, sender.userType, recipient.userId, recipient.userType);
+        log.info("💬 [SendMessage] Message saved: id={}, senderId={}, recipientId={}, senderType={}, recipientType={}", 
+                savedMessage.getId(), savedMessage.getSenderId(), savedMessage.getRecipientId(),
+                savedMessage.getSenderType(), savedMessage.getRecipientType());
         
         return convertToResponse(savedMessage);
     }
@@ -114,7 +115,14 @@ public class ChatMessageService {
     public List<ConversationResponse> getConversations() {
         UniversalUserService.UserInfo currentUser = universalUserService.getCurrentUser();
         
+        log.info("🔍 [Conversations] Getting conversations for userId: {}, userType: {}", 
+                currentUser.userId, currentUser.userType);
+        
         List<Long> partnerIds = chatMessageRepository.findConversationPartners(currentUser.userId);
+        
+        log.info("🔍 [Conversations] Found {} conversation partners: {}", 
+                partnerIds.size(), partnerIds);
+        
         List<ConversationResponse> conversations = new ArrayList<>();
         
         for (Long partnerId : partnerIds) {

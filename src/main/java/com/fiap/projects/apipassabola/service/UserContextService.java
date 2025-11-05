@@ -85,6 +85,32 @@ public class UserContextService {
     }
     
     /**
+     * Gets the GLOBAL USER ID and type of the currently authenticated user
+     * IMPORTANT: Returns the GLOBAL userId (used for notifications, cross-type operations)
+     * @return UserIdAndType object with global userId and userType
+     */
+    public UserIdAndType getCurrentGlobalUserIdAndType() {
+        String email = getCurrentUserDetails().getUsername(); // getUsername() returns email in our system
+        
+        Player player = playerRepository.findByEmail(email).orElse(null);
+        if (player != null) {
+            return new UserIdAndType(player.getUserId(), UserType.PLAYER);  // Global userId
+        }
+        
+        Organization organization = organizationRepository.findByEmail(email).orElse(null);
+        if (organization != null) {
+            return new UserIdAndType(organization.getUserId(), UserType.ORGANIZATION);  // Global userId
+        }
+        
+        Spectator spectator = spectatorRepository.findByEmail(email).orElse(null);
+        if (spectator != null) {
+            return new UserIdAndType(spectator.getUserId(), UserType.SPECTATOR);  // Global userId
+        }
+        
+        throw new RuntimeException("User not found: " + email);
+    }
+    
+    /**
      * Inner class to hold user ID and type information
      */
     public static class UserIdAndType {

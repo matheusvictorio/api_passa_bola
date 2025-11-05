@@ -33,7 +33,7 @@ public class NotificationController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        UserContextService.UserIdAndType currentUser = userContextService.getCurrentUserIdAndType();
+        UserContextService.UserIdAndType currentUser = userContextService.getCurrentGlobalUserIdAndType();
         Pageable pageable = PageRequest.of(page, size);
         
         Page<NotificationResponse> notifications = notificationService.getMyNotifications(
@@ -54,7 +54,7 @@ public class NotificationController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        UserContextService.UserIdAndType currentUser = userContextService.getCurrentUserIdAndType();
+        UserContextService.UserIdAndType currentUser = userContextService.getCurrentGlobalUserIdAndType();
         Pageable pageable = PageRequest.of(page, size);
         
         Page<NotificationResponse> notifications = notificationService.getUnreadNotifications(
@@ -72,7 +72,7 @@ public class NotificationController {
     @GetMapping("/unread/count")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, Long>> getUnreadCount() {
-        UserContextService.UserIdAndType currentUser = userContextService.getCurrentUserIdAndType();
+        UserContextService.UserIdAndType currentUser = userContextService.getCurrentGlobalUserIdAndType();
         
         long count = notificationService.countUnreadNotifications(
                 currentUser.getUserId(),
@@ -91,7 +91,7 @@ public class NotificationController {
     @GetMapping("/recent")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<NotificationResponse>> getRecentNotifications() {
-        UserContextService.UserIdAndType currentUser = userContextService.getCurrentUserIdAndType();
+        UserContextService.UserIdAndType currentUser = userContextService.getCurrentGlobalUserIdAndType();
         
         List<NotificationResponse> notifications = notificationService.getRecentNotifications(
                 currentUser.getUserId(),
@@ -107,7 +107,7 @@ public class NotificationController {
     @PatchMapping("/{id}/read")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, String>> markAsRead(@PathVariable Long id) {
-        UserContextService.UserIdAndType currentUser = userContextService.getCurrentUserIdAndType();
+        UserContextService.UserIdAndType currentUser = userContextService.getCurrentGlobalUserIdAndType();
         
         notificationService.markAsRead(id, currentUser.getUserId(), currentUser.getUserType());
         
@@ -123,7 +123,7 @@ public class NotificationController {
     @PatchMapping("/read-all")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, Object>> markAllAsRead() {
-        UserContextService.UserIdAndType currentUser = userContextService.getCurrentUserIdAndType();
+        UserContextService.UserIdAndType currentUser = userContextService.getCurrentGlobalUserIdAndType();
         
         int count = notificationService.markAllAsRead(currentUser.getUserId(), currentUser.getUserType());
         
@@ -140,7 +140,7 @@ public class NotificationController {
     @DeleteMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, String>> deleteNotification(@PathVariable Long id) {
-        UserContextService.UserIdAndType currentUser = userContextService.getCurrentUserIdAndType();
+        UserContextService.UserIdAndType currentUser = userContextService.getCurrentGlobalUserIdAndType();
         
         notificationService.deleteNotification(id, currentUser.getUserId(), currentUser.getUserType());
         
