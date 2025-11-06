@@ -132,30 +132,51 @@ public class NotificationService {
     
     /**
      * Marcar notificação como lida
+     * Retorna true se marcada com sucesso, false se não encontrada ou sem permissão
      */
     @Transactional
-    public void markAsRead(Long notificationId, Long userId, UserType userType) {
-        Notification notification = notificationRepository.findById(notificationId)
-                .orElseThrow(() -> new RuntimeException("Notificação não encontrada"));
-        
-        log.info("Tentando marcar notificação {} como lida. UserId: {}, UserType: {}, RecipientId: {}, RecipientType: {}", 
-                notificationId, userId, userType, notification.getRecipientId(), notification.getRecipientType());
-        
-        // Verificar se a notificação pertence ao usuário
-        if (!notification.getRecipientId().equals(userId) || 
-            !notification.getRecipientType().equals(userType)) {
-            log.error("Permissão negada! UserId: {} != RecipientId: {} OU UserType: {} != RecipientType: {}", 
-                    userId, notification.getRecipientId(), userType, notification.getRecipientType());
-            throw new RuntimeException("Você não tem permissão para marcar esta notificação como lida");
+    public boolean markAsRead(Long notificationId, Long userId, UserType userType) {
+        try {
+            Notification notification = notificationRepository.findById(notificationId)
+                    .orElse(null);
+            
+            // Se notificação não existe, retornar false silenciosamente
+            if (notification == null) {
+                log.warn("Notificação {} não encontrada - pode ter sido deletada", notificationId);
+                return false;
+            }
+            
+            log.info("Tentando marcar notificação {} como lida. UserId: {}, UserType: {}, RecipientId: {}, RecipientType: {}", 
+                    notificationId, userId, userType, notification.getRecipientId(), notification.getRecipientType());
+            
+            // Verificar se a notificação pertence ao usuário
+            if (!notification.getRecipientId().equals(userId) || 
+                !notification.getRecipientType().equals(userType)) {
+                log.warn("Permissão negada para marcar notificação {} como lida. UserId: {} != RecipientId: {} OU UserType: {} != RecipientType: {}", 
+                        notificationId, userId, notification.getRecipientId(), userType, notification.getRecipientType());
+                return false;
+            }
+            
+            // Se já está marcada como lida, não fazer nada
+            if (notification.getIsRead()) {
+                log.debug("Notificação {} já está marcada como lida", notificationId);
+                return true;
+            }
+            
+            notification.markAsRead();
+            notificationRepository.save(notification);
+            
+            log.info("Notificação {} marcada como lida com sucesso", notificationId);
+            
+            // Enviar atualização via WebSocket
+            sendNotificationUpdateViaWebSocket(userId, userType);
+            
+            return true;
+            
+        } catch (Exception e) {
+            log.error("Erro ao marcar notificação {} como lida: {}", notificationId, e.getMessage());
+            return false;
         }
-        
-        notification.markAsRead();
-        notificationRepository.save(notification);
-        
-        log.info("Notificação {} marcada como lida com sucesso", notificationId);
-        
-        // Enviar atualização via WebSocket
-        sendNotificationUpdateViaWebSocket(userId, userType);
     }
     
     /**
