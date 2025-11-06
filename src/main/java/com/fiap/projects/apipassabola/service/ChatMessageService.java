@@ -36,6 +36,23 @@ public class ChatMessageService {
     public ChatMessageResponse sendMessage(ChatMessageRequest request) {
         // Get current user (sender)
         UniversalUserService.UserInfo sender = universalUserService.getCurrentUser();
+        return sendMessageInternal(request, sender);
+    }
+
+    /**
+     * Send a universal chat message using Principal (for WebSocket contexts)
+     */
+    @Transactional
+    public ChatMessageResponse sendMessage(ChatMessageRequest request, java.security.Principal principal) {
+        // Get current user from Principal (sender)
+        UniversalUserService.UserInfo sender = universalUserService.getUserFromPrincipal(principal);
+        return sendMessageInternal(request, sender);
+    }
+
+    /**
+     * Internal method to send message
+     */
+    private ChatMessageResponse sendMessageInternal(ChatMessageRequest request, UniversalUserService.UserInfo sender) {
         
         // Get recipient by userId
         UniversalUserService.UserInfo recipient = universalUserService.findByUserId(request.getRecipientId());

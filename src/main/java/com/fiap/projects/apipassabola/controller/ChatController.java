@@ -17,6 +17,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 
 /**
@@ -39,13 +40,13 @@ public class ChatController {
      * Server broadcasts to: /user/{recipientId}/queue/messages
      */
     @MessageMapping("/chat.send")
-    public void sendMessage(@Payload @Valid ChatMessageRequest request) {
-        log.info("📨 [WebSocket] Received message request: recipientId={}, content={}", 
-                request.getRecipientId(), request.getContent());
+    public void sendMessage(@Payload @Valid ChatMessageRequest request, Principal principal) {
+        log.info("📨 [WebSocket] Received message request: recipientId={}, content={}, principal={}", 
+                request.getRecipientId(), request.getContent(), principal != null ? principal.getName() : "null");
         
         try {
-            // Save message to database
-            ChatMessageResponse response = chatMessageService.sendMessage(request);
+            // Save message to database using Principal (WebSocket context)
+            ChatMessageResponse response = chatMessageService.sendMessage(request, principal);
             log.info("💾 [WebSocket] Message saved to DB: id={}, senderId={}, recipientId={}", 
                     response.getId(), response.getSenderId(), response.getRecipientId());
             

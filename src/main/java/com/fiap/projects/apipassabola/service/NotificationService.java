@@ -138,14 +138,21 @@ public class NotificationService {
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new RuntimeException("Notificação não encontrada"));
         
+        log.info("Tentando marcar notificação {} como lida. UserId: {}, UserType: {}, RecipientId: {}, RecipientType: {}", 
+                notificationId, userId, userType, notification.getRecipientId(), notification.getRecipientType());
+        
         // Verificar se a notificação pertence ao usuário
         if (!notification.getRecipientId().equals(userId) || 
             !notification.getRecipientType().equals(userType)) {
+            log.error("Permissão negada! UserId: {} != RecipientId: {} OU UserType: {} != RecipientType: {}", 
+                    userId, notification.getRecipientId(), userType, notification.getRecipientType());
             throw new RuntimeException("Você não tem permissão para marcar esta notificação como lida");
         }
         
         notification.markAsRead();
         notificationRepository.save(notification);
+        
+        log.info("Notificação {} marcada como lida com sucesso", notificationId);
         
         // Enviar atualização via WebSocket
         sendNotificationUpdateViaWebSocket(userId, userType);

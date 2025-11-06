@@ -43,7 +43,7 @@ public class UniversalUserService {
     }
 
     /**
-     * Get current authenticated user info
+     * Get current authenticated user info from SecurityContext
      */
     public UserInfo getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -56,6 +56,19 @@ public class UniversalUserService {
     }
 
     /**
+     * Get user info from Principal (for WebSocket contexts)
+     */
+    public UserInfo getUserFromPrincipal(java.security.Principal principal) {
+        if (principal == null) {
+            throw new RuntimeException("Principal is null - user not authenticated");
+        }
+        
+        String email = principal.getName();
+        log.debug("Getting user from principal: email={}", email);
+        return findByEmail(email);
+    }
+
+    /**
      * Find user by email across all types
      */
     public UserInfo findByEmail(String email) {
@@ -63,6 +76,7 @@ public class UniversalUserService {
         var playerOpt = playerRepository.findByEmail(email);
         if (playerOpt.isPresent()) {
             Player player = playerOpt.get();
+            log.debug("Found player: id={}, userId={}, email={}", player.getId(), player.getUserId(), player.getEmail());
             return new UserInfo(
                     player.getUserId(),
                     player.getEmail(),
