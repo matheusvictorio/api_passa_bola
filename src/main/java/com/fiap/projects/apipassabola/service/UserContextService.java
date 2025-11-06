@@ -3,6 +3,7 @@ package com.fiap.projects.apipassabola.service;
 import com.fiap.projects.apipassabola.entity.*;
 import com.fiap.projects.apipassabola.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserContextService {
     
     private final PlayerRepository playerRepository;
@@ -94,16 +96,22 @@ public class UserContextService {
         
         Player player = playerRepository.findByEmail(email).orElse(null);
         if (player != null) {
+            log.debug("getCurrentGlobalUserIdAndType - Player encontrado: email={}, userId={}, entityId={}", 
+                    email, player.getUserId(), player.getId());
             return new UserIdAndType(player.getUserId(), UserType.PLAYER);  // Global userId
         }
         
         Organization organization = organizationRepository.findByEmail(email).orElse(null);
         if (organization != null) {
+            log.debug("getCurrentGlobalUserIdAndType - Organization encontrada: email={}, userId={}, entityId={}", 
+                    email, organization.getUserId(), organization.getId());
             return new UserIdAndType(organization.getUserId(), UserType.ORGANIZATION);  // Global userId
         }
         
         Spectator spectator = spectatorRepository.findByEmail(email).orElse(null);
         if (spectator != null) {
+            log.debug("getCurrentGlobalUserIdAndType - Spectator encontrado: email={}, userId={}, entityId={}", 
+                    email, spectator.getUserId(), spectator.getId());
             return new UserIdAndType(spectator.getUserId(), UserType.SPECTATOR);  // Global userId
         }
         
