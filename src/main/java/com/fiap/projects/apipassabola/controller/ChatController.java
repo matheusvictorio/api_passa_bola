@@ -142,8 +142,9 @@ public class ChatController {
      */
     @GetMapping("/conversation/{otherUserId}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<ChatMessageResponse>> getConversation(@PathVariable Long otherUserId) {
-        List<ChatMessageResponse> messages = chatMessageService.getConversation(otherUserId);
+    public ResponseEntity<List<ChatMessageResponse>> getConversation(@PathVariable String otherUserId) {
+        Long otherUserIdLong = Long.parseLong(otherUserId);
+        List<ChatMessageResponse> messages = chatMessageService.getConversation(otherUserIdLong);
         return ResponseEntity.ok(messages);
     }
 
@@ -154,9 +155,10 @@ public class ChatController {
     @GetMapping("/conversation/{otherUserId}/paginated")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<ChatMessageResponse>> getConversationPaginated(
-            @PathVariable Long otherUserId,
+            @PathVariable String otherUserId,
             @PageableDefault(size = 50) Pageable pageable) {
-        Page<ChatMessageResponse> messages = chatMessageService.getConversation(otherUserId, pageable);
+        Long otherUserIdLong = Long.parseLong(otherUserId);
+        Page<ChatMessageResponse> messages = chatMessageService.getConversation(otherUserIdLong, pageable);
         return ResponseEntity.ok(messages);
     }
 
@@ -166,8 +168,9 @@ public class ChatController {
      */
     @PutMapping("/read/{senderId}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Void> markAsRead(@PathVariable Long senderId) {
-        chatMessageService.markMessagesAsRead(senderId);
+    public ResponseEntity<Void> markAsRead(@PathVariable String senderId) {
+        Long senderIdLong = Long.parseLong(senderId);
+        chatMessageService.markMessagesAsRead(senderIdLong);
         return ResponseEntity.ok().build();
     }
 

@@ -19,6 +19,12 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/notifications")
 @RequiredArgsConstructor
+@CrossOrigin(
+    originPatterns = "*",
+    methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PATCH, RequestMethod.DELETE, RequestMethod.OPTIONS},
+    allowedHeaders = "*",
+    allowCredentials = "true"
+)
 public class NotificationController {
     
     private final NotificationService notificationService;
@@ -103,17 +109,26 @@ public class NotificationController {
     
     /**
      * Marcar notificação como lida
+     * Retorna 200 OK mesmo se a notificação não existir (graceful degradation)
      */
     @PatchMapping("/{id}/read")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Map<String, String>> markAsRead(@PathVariable Long id) {
+    public ResponseEntity<Map<String, Object>> markAsRead(@PathVariable String id) {
+        Long notificationId = Long.parseLong(id);
         UserContextService.UserIdAndType currentUser = userContextService.getCurrentGlobalUserIdAndType();
         
-        notificationService.markAsRead(id, currentUser.getUserId(), currentUser.getUserType());
+        boolean success = notificationService.markAsRead(notificationId, currentUser.getUserId(), currentUser.getUserType());
         
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Notificação marcada como lida");
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", success);
         
+        if (success) {
+            response.put("message", "Notificação marcada como lida");
+        } else {
+            response.put("message", "Notificação não encontrada ou já processada");
+        }
+        
+        // Sempre retorna 200 OK para evitar erros no frontend
         return ResponseEntity.ok(response);
     }
     
@@ -139,10 +154,11 @@ public class NotificationController {
      */
     @DeleteMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Map<String, String>> deleteNotification(@PathVariable Long id) {
+    public ResponseEntity<Map<String, String>> deleteNotification(@PathVariable String id) {
+        Long notificationId = Long.parseLong(id);
         UserContextService.UserIdAndType currentUser = userContextService.getCurrentGlobalUserIdAndType();
         
-        notificationService.deleteNotification(id, currentUser.getUserId(), currentUser.getUserType());
+        notificationService.deleteNotification(notificationId, currentUser.getUserId(), currentUser.getUserType());
         
         Map<String, String> response = new HashMap<>();
         response.put("message", "Notificação deletada com sucesso");
