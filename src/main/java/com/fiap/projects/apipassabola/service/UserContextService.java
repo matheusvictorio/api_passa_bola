@@ -192,4 +192,31 @@ public class UserContextService {
                 return "Unknown User";
         }
     }
+    
+    /**
+     * Gets the name of the currently authenticated user
+     * @return Current user's name field
+     */
+    public String getCurrentUserName() {
+        UserIdAndType userInfo = getCurrentUserIdAndType();
+        Long userId = userInfo.getUserId();
+        UserType userType = userInfo.getUserType();
+        
+        switch (userType) {
+            case PLAYER:
+                return playerRepository.findById(userId)
+                        .map(Player::getName)
+                        .orElse("Unknown Player");
+            case ORGANIZATION:
+                return organizationRepository.findById(userId)
+                        .map(Organization::getName)
+                        .orElse("Unknown Organization");
+            case SPECTATOR:
+                return spectatorRepository.findById(userId)
+                        .map(Spectator::getName)
+                        .orElse("Unknown Spectator");
+            default:
+                return "Unknown User";
+        }
+    }
 }
