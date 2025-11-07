@@ -17,7 +17,9 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -130,6 +132,47 @@ public class AzureBlobStorageService {
     }
 
     /**
+     * Upload de vídeo de jogo
+     * Mantém o nome original do arquivo para preservar o timestamp
+     * @param file Arquivo de vídeo
+     * @return URL do vídeo no Azure Blob
+     */
+    public String uploadGameVideo(MultipartFile file) {
+        try {
+            // Usar nome original do arquivo para preservar timestamp
+            String originalFilename = file.getOriginalFilename();
+            String blobName = "videos/" + originalFilename;
+            
+            log.info("Iniciando upload de vídeo: {} para container: videos", blobName);
+            
+            // Obter cliente do blob
+            BlobClient blobClient = blobServiceClient
+                    .getBlobContainerClient("videos")
+                    .getBlobClient(blobName);
+            
+            // Configurar headers HTTP para vídeo
+            BlobHttpHeaders headers = new BlobHttpHeaders()
+                    .setContentType(file.getContentType() != null ? file.getContentType() : "video/mp4");
+            
+            // Upload do arquivo
+            blobClient.upload(file.getInputStream(), file.getSize(), true);
+            blobClient.setHttpHeaders(headers);
+            
+            String blobUrl = blobClient.getBlobUrl();
+            log.info("Upload de vídeo concluído com sucesso: {}", blobUrl);
+            
+            return blobUrl;
+            
+        } catch (IOException e) {
+            log.error("Erro ao fazer upload do vídeo: {}", e.getMessage());
+            throw new RuntimeException("Erro ao fazer upload do vídeo: " + e.getMessage(), e);
+        } catch (BlobStorageException e) {
+            log.error("Erro no Azure Blob Storage: {}", e.getMessage());
+            throw new RuntimeException("Erro no Azure Blob Storage: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * Download de arquivo
      */
     public byte[] downloadFile(String containerName, String blobName) {
@@ -239,6 +282,55 @@ public class AzureBlobStorageService {
     }
 
     /**
+     * Listar vídeos do container com informações detalhadas
+     * Retorna lista de mapas com URL e nome do arquivo
+     */
+    public List<Map<String, Object>> listVideosWithDetails(String containerName, String prefix) {
+        List<Map<String, Object>> videos = new ArrayList<>();
+
+        try {
+            log.info("Listando vídeos do container: {} com prefix: {}", containerName, prefix);
+
+            var containerClient = blobServiceClient.getBlobContainerClient(containerName);
+
+            // Garantir que o prefix termine com / se não estiver vazio
+            String normalizedPrefix = prefix;
+            if (prefix != null && !prefix.isEmpty() && !prefix.endsWith("/")) {
+                normalizedPrefix = prefix + "/";
+            }
+
+            // Listar todos os blobs com o prefixo
+            ListBlobsOptions options = new ListBlobsOptions().setPrefix(normalizedPrefix);
+            for (BlobItem blobItem : containerClient.listBlobs(options, null)) {
+                Map<String, Object> videoInfo = new HashMap<>();
+                
+                String blobName = blobItem.getName();
+                String blobUrl = containerClient.getBlobClient(blobName).getBlobUrl();
+                
+                // Extrair apenas o nome do arquivo (sem o path)
+                String fileName = blobName.contains("/") ? 
+                        blobName.substring(blobName.lastIndexOf("/") + 1) : blobName;
+                
+                videoInfo.put("url", blobUrl);
+                videoInfo.put("filename", fileName);
+                videoInfo.put("fullPath", blobName);
+                videoInfo.put("size", blobItem.getProperties().getContentLength());
+                videoInfo.put("lastModified", blobItem.getProperties().getLastModified());
+                
+                videos.add(videoInfo);
+                log.debug("Vídeo encontrado: {}", fileName);
+            }
+
+            log.info("Total de vídeos encontrados: {}", videos.size());
+            return videos;
+
+        } catch (BlobStorageException e) {
+            log.error("Erro ao listar vídeos: {}", e.getMessage());
+            throw new RuntimeException("Erro ao listar vídeos: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * Verificar se arquivo existe
      */
     public boolean fileExists(String containerName, String blobName) {
@@ -319,5 +411,23 @@ public class AzureBlobStorageService {
             return 0;
         }
         return (double) file.getSize() / (1024 * 1024);
+    }
+
+    /**
+     * Validar tipo de arquivo de vídeo
+     */
+    public boolean isValidVideoFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return false;
+        }
+
+        String contentType = file.getContentType();
+        return contentType != null && (
+                contentType.equals("video/mp4") ||
+                contentType.equals("video/mpeg") ||
+                contentType.equals("video/quicktime") ||
+                contentType.equals("video/x-msvideo") ||
+                contentType.equals("video/webm")
+        );
     }
 }

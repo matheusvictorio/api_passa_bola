@@ -15,6 +15,7 @@
 - [🤝 Sistema de Seguimento](#-sistema-de-seguimento)
 - [📝 Sistema de Posts](#-sistema-de-posts)
 - [📁 Sistema de Upload de Arquivos (Azure Blob Storage)](#-sistema-de-upload-de-arquivos-azure-blob-storage)
+- [🎬 Sistema de Vídeos de Jogos](#-sistema-de-vídeos-de-jogos)
 - [💬 Sistema de Chat](#-sistema-de-chat)
 - [🔔 Sistema de Notificações](#-sistema-de-notificações-em-tempo-real)
 - [📡 Endpoints da API](#-endpoints-da-api)
@@ -2461,6 +2462,316 @@ GET /api/files/teams/{teamId}/logos
 DELETE /api/files/delete?url=https://stdev2495531.blob.core.windows.net/avatars/users/player/1/avatar.jpg
 Authorization: Bearer {token}
 ```
+
+---
+
+## 🎬 Sistema de Vídeos de Jogos
+
+### 🎯 Visão Geral
+Sistema simples e eficiente para buscar vídeos de jogos diretamente do Azure Blob Storage. Os vídeos são gravados pelo dispositivo IoT e automaticamente associados aos jogos baseado no timestamp do arquivo.
+
+### 📹 Como Funciona
+
+```
+1. Dispositivo IoT grava vídeo durante o jogo
+   ↓
+2. Vídeo é enviado para Azure Blob Storage (videos/videos/)
+   ↓
+3. Nome do arquivo contém timestamp: clip_2025-11-07_16-31-36.mp4
+   ↓
+4. Usuário clica em "Ver Vídeos" no jogo
+   ↓
+5. Frontend chama: GET /api/games/{gameId}/videos
+   ↓
+6. API busca vídeos ±3 horas do horário do jogo
+   ↓
+7. Retorna lista de vídeos ordenados por timestamp
+```
+
+### 📡 Endpoint Principal
+
+#### 🎥 Buscar Vídeos do Jogo
+
+```http
+GET /api/games/{gameId}/videos
+```
+
+**Descrição:** Busca todos os vídeos relacionados ao jogo no Azure Blob Storage. A busca é feita sob demanda (não salva no banco de dados) e retorna vídeos gravados até 3 horas antes e 3 horas depois do horário do jogo.
+
+**Parâmetros:**
+- `gameId` (path) - ID do jogo
+
+**Exemplo de Chamada:**
+```bash
+curl -X GET "http://localhost:8080/api/games/42/videos"
+```
+
+**Resposta de Sucesso (200 OK):**
+```json
+{
+  "success": true,
+  "gameId": 42,
+  "gameName": "Amistoso - Time A vs Time B",
+  "gameDate": "2025-11-07T16:00:00",
+  "count": 3,
+  "videos": [
+    {
+      "url": "https://stdev2495531.blob.core.windows.net/videos/videos/clip_2025-11-07_15-45-00.mp4",
+      "filename": "clip_2025-11-07_15-45-00.mp4",
+      "videoTimestamp": "2025-11-07T15:45:00",
+      "size": 47483648,
+      "lastModified": "2025-11-07T15:45:30Z",
+      "minutesFromGameStart": -15,
+      "timeDiffDescription": "15 minutos antes do início"
+    },
+    {
+      "url": "https://stdev2495531.blob.core.windows.net/videos/videos/clip_2025-11-07_16-31-36.mp4",
+      "filename": "clip_2025-11-07_16-31-36.mp4",
+      "videoTimestamp": "2025-11-07T16:31:36",
+      "size": 45234567,
+      "lastModified": "2025-11-07T16:32:00Z",
+      "minutesFromGameStart": 31,
+      "timeDiffDescription": "31 minutos após o início"
+    },
+    {
+      "url": "https://stdev2495531.blob.core.windows.net/videos/videos/clip_2025-11-07_17-15-20.mp4",
+      "filename": "clip_2025-11-07_17-15-20.mp4",
+      "videoTimestamp": "2025-11-07T17:15:20",
+      "size": 52341234,
+      "lastModified": "2025-11-07T17:15:45Z",
+      "minutesFromGameStart": 75,
+      "timeDiffDescription": "75 minutos após o início"
+    }
+  ]
+}
+```
+
+**Resposta de Erro (400 Bad Request):**
+```json
+{
+  "success": false,
+  "error": "Jogo não encontrado"
+}
+```
+
+### 📋 Campos Retornados
+
+Cada vídeo na lista contém:
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `url` | String | URL completa do vídeo no Azure Blob Storage |
+| `filename` | String | Nome do arquivo do vídeo |
+| `videoTimestamp` | String | Data e hora em que o vídeo foi gravado (ISO 8601) |
+| `size` | Long | Tamanho do arquivo em bytes |
+| `lastModified` | String | Data e hora da última modificação no blob |
+| `minutesFromGameStart` | Long | Diferença em minutos do início do jogo (negativo = antes, positivo = depois) |
+| `timeDiffDescription` | String | Descrição amigável da diferença de tempo |
+
+### 🎯 Formato do Nome do Arquivo
+
+Os vídeos devem seguir o padrão de nomenclatura:
+
+```
+clip_YYYY-MM-DD_HH-MM-SS.mp4
+```
+
+**Exemplos válidos:**
+- ✅ `clip_2025-11-07_16-31-36.mp4`
+- ✅ `clip_2025-12-25_14-00-00.mp4`
+- ✅ `clip_2026-01-15_09-45-30.mp4`
+
+**Exemplos inválidos:**
+- ❌ `video_123.mp4` (sem timestamp)
+- ❌ `clip-2025-11-07.mp4` (formato incorreto)
+- ❌ `game_video.mp4` (sem padrão)
+
+### 🔧 Configuração do Azure Blob
+
+**Container:** `videos`  
+**Pasta:** `videos/`  
+**Acesso:** Público (leitura)
+
+**Estrutura no Azure:**
+```
+videos/
+└── videos/
+    ├── clip_2025-11-07_15-45-00.mp4
+    ├── clip_2025-11-07_16-31-36.mp4
+    ├── clip_2025-11-07_17-15-20.mp4
+    └── ...
+```
+
+### 💻 Exemplo de Integração Frontend
+
+#### React/JavaScript
+```javascript
+async function carregarVideosDoJogo(gameId) {
+  try {
+    const response = await fetch(`/api/games/${gameId}/videos`);
+    const data = await response.json();
+    
+    if (data.success) {
+      console.log(`Encontrados ${data.count} vídeos para o jogo ${data.gameName}`);
+      
+      // Exibir vídeos
+      data.videos.forEach(video => {
+        console.log(`📹 ${video.filename}`);
+        console.log(`   URL: ${video.url}`);
+        console.log(`   Quando: ${video.timeDiffDescription}`);
+        console.log(`   Tamanho: ${(video.size / 1024 / 1024).toFixed(2)} MB`);
+      });
+      
+      return data.videos;
+    } else {
+      console.error('Erro ao buscar vídeos:', data.error);
+      return [];
+    }
+  } catch (error) {
+    console.error('Erro na requisição:', error);
+    return [];
+  }
+}
+
+// Usar em um componente
+function GameVideos({ gameId }) {
+  const [videos, setVideos] = useState([]);
+  const [loading, setLoading] = useState(false);
+  
+  const loadVideos = async () => {
+    setLoading(true);
+    const videoList = await carregarVideosDoJogo(gameId);
+    setVideos(videoList);
+    setLoading(false);
+  };
+  
+  return (
+    <div>
+      <button onClick={loadVideos} disabled={loading}>
+        {loading ? 'Carregando...' : 'Ver Vídeos do Jogo'}
+      </button>
+      
+      {videos.length > 0 && (
+        <div className="video-list">
+          {videos.map((video, index) => (
+            <div key={index} className="video-item">
+              <video controls width="100%">
+                <source src={video.url} type="video/mp4" />
+              </video>
+              <p>{video.timeDiffDescription}</p>
+              <p>Gravado em: {new Date(video.videoTimestamp).toLocaleString()}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+#### Vue.js
+```vue
+<template>
+  <div>
+    <button @click="loadVideos" :disabled="loading">
+      {{ loading ? 'Carregando...' : 'Ver Vídeos do Jogo' }}
+    </button>
+    
+    <div v-if="videos.length > 0" class="video-list">
+      <div v-for="video in videos" :key="video.filename" class="video-item">
+        <video controls width="100%">
+          <source :src="video.url" type="video/mp4" />
+        </video>
+        <p>{{ video.timeDiffDescription }}</p>
+        <p>Tamanho: {{ formatSize(video.size) }}</p>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+export default {
+  props: ['gameId'],
+  data() {
+    return {
+      videos: [],
+      loading: false
+    };
+  },
+  methods: {
+    async loadVideos() {
+      this.loading = true;
+      try {
+        const response = await fetch(`/api/games/${this.gameId}/videos`);
+        const data = await response.json();
+        
+        if (data.success) {
+          this.videos = data.videos;
+        }
+      } catch (error) {
+        console.error('Erro ao carregar vídeos:', error);
+      } finally {
+        this.loading = false;
+      }
+    },
+    formatSize(bytes) {
+      return (bytes / 1024 / 1024).toFixed(2) + ' MB';
+    }
+  }
+};
+</script>
+```
+
+### ⚡ Vantagens desta Abordagem
+
+✅ **Simples** - Sem webhook, sem agendamento, sem banco de dados  
+✅ **Sob Demanda** - Busca apenas quando o usuário solicitar  
+✅ **Sempre Atualizado** - Busca direto no Azure Blob Storage  
+✅ **Sem Configuração Complexa** - Não precisa configurar Azure Event Grid  
+✅ **Fácil de Testar** - Basta chamar o endpoint  
+✅ **Menos Código** - Muito mais fácil de manter  
+✅ **Escalável** - Suporta milhares de vídeos sem impacto no banco  
+
+### 🔍 Regras de Busca
+
+- **Janela de Tempo:** ±3 horas do horário do jogo
+- **Ordenação:** Vídeos ordenados por timestamp (mais antigos primeiro)
+- **Formato:** Apenas arquivos com padrão `clip_YYYY-MM-DD_HH-MM-SS.mp4`
+- **Container:** `videos/videos/` no Azure Blob Storage
+
+### 📊 Informações Úteis
+
+**Exemplo de Timeline:**
+```
+Jogo às 16:00
+
+13:00 ←─────────────────────────────────────────→ 19:00
+      |                                           |
+      └─── Janela de busca (±3 horas) ───────────┘
+      
+Vídeos encontrados:
+├── 15:45 - "15 minutos antes do início"
+├── 16:31 - "31 minutos após o início"
+└── 17:15 - "75 minutos após o início"
+```
+
+### 🐛 Troubleshooting
+
+**Problema:** Nenhum vídeo encontrado
+
+**Soluções:**
+1. Verificar se o jogo existe e tem data/hora definida
+2. Verificar se há vídeos no container `videos/videos/`
+3. Verificar se os nomes dos arquivos seguem o padrão correto
+4. Verificar se os vídeos estão dentro da janela de ±3 horas
+
+**Problema:** Vídeos não aparecem
+
+**Soluções:**
+1. Verificar credenciais do Azure Blob Storage
+2. Verificar se o container `videos` existe
+3. Verificar permissões de leitura do container
+4. Verificar logs da aplicação para erros
 
 **Resposta:**
 ```json
