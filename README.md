@@ -14,6 +14,7 @@
 - [🏆 Sistema de Torneios e Chaveamento](#-sistema-de-torneios-e-chaveamento)
 - [🤝 Sistema de Seguimento](#-sistema-de-seguimento)
 - [📝 Sistema de Posts](#-sistema-de-posts)
+- [📁 Sistema de Upload de Arquivos (Azure Blob Storage)](#-sistema-de-upload-de-arquivos-azure-blob-storage)
 - [💬 Sistema de Chat](#-sistema-de-chat)
 - [🔔 Sistema de Notificações](#-sistema-de-notificações-em-tempo-real)
 - [📡 Endpoints da API](#-endpoints-da-api)
@@ -2261,6 +2262,375 @@ Quando você busca posts (GET /api/posts ou GET /api/posts/{id}), a resposta inc
 
 ---
 
+## 📁 Sistema de Upload de Arquivos (Azure Blob Storage)
+
+### 🎯 Visão Geral
+Sistema completo de gerenciamento de arquivos usando **Azure Blob Storage** para armazenar avatares, banners, imagens de posts, jogos, times e documentos.
+
+### 📦 Containers Disponíveis
+
+| Container | Acesso | Uso | URL Base |
+|-----------|--------|-----|----------|
+| **avatars** | Público | Fotos de perfil e banners | `https://stdev2495531.blob.core.windows.net/avatars` |
+| **imagens** | Público | Fotos de posts, jogos, times | `https://stdev2495531.blob.core.windows.net/imagens` |
+| **documentos** | Privado | Arquivos confidenciais | `https://stdev2495531.blob.core.windows.net/documentos` |
+| **temp** | Público | Arquivos temporários (7 dias) | `https://stdev2495531.blob.core.windows.net/temp` |
+
+### 📡 Endpoints de Upload
+
+#### 1️⃣ Upload de Avatar
+```http
+POST /api/files/users/{userId}/avatar?userType=PLAYER
+Authorization: Bearer {token}
+Content-Type: multipart/form-data
+
+Body: file (imagem JPG/PNG/GIF/WebP, máx 5MB)
+```
+
+**Resposta:**
+```json
+{
+  "success": true,
+  "message": "Avatar atualizado com sucesso",
+  "url": "https://stdev2495531.blob.core.windows.net/avatars/users/player/1/20250107_114530_a1b2c3d4.jpg",
+  "userId": 1,
+  "userType": "PLAYER"
+}
+```
+
+#### 2️⃣ Upload de Banner
+```http
+POST /api/files/users/{userId}/banner?userType=PLAYER
+Authorization: Bearer {token}
+Content-Type: multipart/form-data
+
+Body: file (imagem, máx 10MB)
+```
+
+#### 3️⃣ Upload de Imagem de Post
+```http
+POST /api/files/posts/{postId}/image
+Authorization: Bearer {token}
+Content-Type: multipart/form-data
+
+Body: file (imagem, máx 10MB)
+```
+
+**Resposta:**
+```json
+{
+  "success": true,
+  "message": "Imagem do post enviada com sucesso",
+  "url": "https://stdev2495531.blob.core.windows.net/imagens/posts/1/20250107_120030_c3d4e5f6.jpg",
+  "postId": 1
+}
+```
+
+#### 4️⃣ Upload de Imagem de Jogo
+```http
+POST /api/files/games/{gameId}/image
+Authorization: Bearer {token}
+Content-Type: multipart/form-data
+
+Body: file (imagem, máx 10MB)
+```
+
+#### 5️⃣ Upload de Logo de Time
+```http
+POST /api/files/teams/{teamId}/logo
+Authorization: Bearer {token}
+Content-Type: multipart/form-data
+
+Body: file (imagem, máx 5MB)
+```
+
+#### 6️⃣ Upload de Documento
+```http
+POST /api/files/documents?category=contratos
+Authorization: Bearer {token}
+Content-Type: multipart/form-data
+
+Body: file (qualquer tipo, máx 50MB)
+```
+
+#### 7️⃣ Upload Temporário
+```http
+POST /api/files/temp
+Authorization: Bearer {token}
+Content-Type: multipart/form-data
+
+Body: file (qualquer tipo, máx 20MB)
+```
+
+**Resposta:**
+```json
+{
+  "success": true,
+  "message": "Arquivo temporário criado",
+  "url": "https://stdev2495531.blob.core.windows.net/temp/2025/01/07/20250107_143022_d4e5f6g7.jpg",
+  "expires": "7 dias"
+}
+```
+
+### 📡 Endpoints de Listagem
+
+#### 1️⃣ Listar Avatares de Usuário
+```http
+GET /api/files/users/{userId}/avatars?userType=PLAYER
+```
+
+**Resposta:**
+```json
+{
+  "success": true,
+  "userId": 1,
+  "userType": "PLAYER",
+  "folder": "users/player/1",
+  "avatars": [
+    "https://stdev2495531.blob.core.windows.net/avatars/users/player/1/20250107_114530_a1b2c3d4.jpg",
+    "https://stdev2495531.blob.core.windows.net/avatars/users/player/1/20250107_120030_b2c3d4e5.jpg"
+  ],
+  "count": 2,
+  "currentAvatar": "https://stdev2495531.blob.core.windows.net/avatars/users/player/1/20250107_120030_b2c3d4e5.jpg"
+}
+```
+
+#### 2️⃣ Listar Banners de Usuário
+```http
+GET /api/files/users/{userId}/banners?userType=PLAYER
+```
+
+**Resposta:**
+```json
+{
+  "success": true,
+  "userId": 1,
+  "userType": "PLAYER",
+  "banners": [
+    "https://stdev2495531.blob.core.windows.net/avatars/banners/player/1/20250107_115530_c3d4e5f6.jpg"
+  ],
+  "count": 1,
+  "currentBanner": "https://stdev2495531.blob.core.windows.net/avatars/banners/player/1/20250107_115530_c3d4e5f6.jpg"
+}
+```
+
+#### 3️⃣ Listar Imagens de Post
+```http
+GET /api/files/posts/{postId}/images
+```
+
+**Resposta:**
+```json
+{
+  "success": true,
+  "postId": 1,
+  "images": [
+    "https://stdev2495531.blob.core.windows.net/imagens/posts/1/20250107_120030_c3d4e5f6.jpg",
+    "https://stdev2495531.blob.core.windows.net/imagens/posts/1/20250107_121530_f6g7h8i9.jpg"
+  ],
+  "count": 2
+}
+```
+
+#### 4️⃣ Listar Imagens de Jogo
+```http
+GET /api/files/games/{gameId}/images
+```
+
+#### 5️⃣ Listar Logos de Time
+```http
+GET /api/files/teams/{teamId}/logos
+```
+
+**Resposta:**
+```json
+{
+  "success": true,
+  "teamId": 1,
+  "logos": [
+    "https://stdev2495531.blob.core.windows.net/imagens/teams/1/20250107_121030_e5f6g7h8.jpg"
+  ],
+  "count": 1,
+  "currentLogo": "https://stdev2495531.blob.core.windows.net/imagens/teams/1/20250107_121030_e5f6g7h8.jpg"
+}
+```
+
+### 🗑️ Endpoint de Deleção
+
+```http
+DELETE /api/files/delete?url=https://stdev2495531.blob.core.windows.net/avatars/users/player/1/avatar.jpg
+Authorization: Bearer {token}
+```
+
+**Resposta:**
+```json
+{
+  "success": true,
+  "message": "Arquivo deletado com sucesso",
+  "url": "https://stdev2495531.blob.core.windows.net/avatars/users/player/1/avatar.jpg"
+}
+```
+
+### 📏 Limites de Tamanho
+
+| Tipo de Upload | Tamanho Máximo |
+|----------------|----------------|
+| Avatar | 5 MB |
+| Banner | 10 MB |
+| Imagem de Post | 10 MB |
+| Imagem de Jogo | 10 MB |
+| Logo de Time | 5 MB |
+| Documento | 50 MB |
+| Arquivo Temporário | 20 MB |
+
+### ✅ Tipos de Arquivo Aceitos
+
+**Para Imagens (Avatar, Banner, Post, Jogo, Time):**
+- ✅ JPG / JPEG
+- ✅ PNG
+- ✅ GIF
+- ✅ WebP
+
+**Para Documentos:**
+- ✅ Qualquer tipo de arquivo
+
+### 🔧 Configuração (application.properties)
+
+```properties
+# Azure Blob Storage Configuration
+azure.storage.account-name=stdev2495531
+azure.storage.account-key=${AZURE_STORAGE_KEY}
+azure.storage.blob-endpoint=https://stdev2495531.blob.core.windows.net
+azure.storage.connection-string=${AZURE_STORAGE_CONNECTION_STRING}
+
+# Container Names
+azure.storage.container.imagens=imagens
+azure.storage.container.avatars=avatars
+azure.storage.container.documentos=documentos
+azure.storage.container.temp=temp
+```
+
+### 💡 Exemplo de Uso (Frontend)
+
+```javascript
+// Upload de avatar
+async function uploadAvatar(userId, userType, file) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(
+    `/api/files/users/${userId}/avatar?userType=${userType}`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    }
+  );
+
+  const result = await response.json();
+  
+  if (result.success) {
+    // Atualizar UI com nova URL
+    document.getElementById('avatar').src = result.url;
+  }
+}
+
+// Buscar avatar atual de um usuário
+async function getUserAvatar(userId, userType) {
+  const response = await fetch(
+    `/api/files/users/${userId}/avatars?userType=${userType}`
+  );
+  const data = await response.json();
+  
+  // Usar o avatar atual (último upload)
+  if (data.currentAvatar) {
+    document.getElementById('avatar').src = data.currentAvatar;
+  }
+}
+
+// Deletar arquivo
+async function deleteFile(fileUrl) {
+  const response = await fetch(
+    `/api/files/delete?url=${encodeURIComponent(fileUrl)}`,
+    {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }
+  );
+
+  return await response.json();
+}
+```
+
+### 🌐 Visualizar no Azure Portal
+
+1. Acesse: **https://portal.azure.com**
+2. Procure por: **stdev2495531**
+3. Clique em **"Containers"**
+4. Navegue pelos containers (avatars, imagens, documentos, temp)
+5. Visualize/baixe seus arquivos
+
+### 📂 Estrutura de Pastas
+
+```
+avatars/
+├── users/
+│   ├── player/{userId}/
+│   ├── organization/{userId}/
+│   └── spectator/{userId}/
+└── banners/
+    ├── player/{userId}/
+    ├── organization/{userId}/
+    └── spectator/{userId}/
+
+imagens/
+├── posts/{postId}/
+├── games/{gameId}/
+└── teams/{teamId}/
+
+documentos/
+├── contratos/
+└── relatorios/
+
+temp/
+└── 2025/01/07/
+```
+
+### ⚠️ Tratamento de Erros
+
+**Erro de validação:**
+```json
+{
+  "success": false,
+  "error": "Tipo de arquivo inválido. Use: JPG, PNG, GIF ou WebP",
+  "timestamp": 1704643200000
+}
+```
+
+**Erro de tamanho:**
+```json
+{
+  "success": false,
+  "error": "Avatar muito grande. Máximo: 5MB. Tamanho atual: 7.52 MB",
+  "timestamp": 1704643200000
+}
+```
+
+**Erro de autenticação:**
+```json
+{
+  "success": false,
+  "error": "Token inválido ou expirado",
+  "timestamp": 1704643200000
+}
+```
+
+---
+
 ## 💬 Sistema de Chat Universal
 
 ### 🎉 Características
@@ -3233,6 +3603,27 @@ CREATE TABLE notifications (
 - **Conexão:** `ws://localhost:8080/ws` (SockJS)
 - **Receber Notificações:** `/topic/notifications/{userType}/{userId}` (Subscribe)
 - **Receber Contador:** `/topic/notifications/{userType}/{userId}/count` (Subscribe)
+
+### 📁 Upload de Arquivos (`/api/files`)
+
+| Método | Endpoint | Auth | Descrição |
+|--------|----------|------|-----------|
+| POST | `/api/files/users/{userId}/avatar?userType=PLAYER` | ✅ | Upload de avatar (máx 5MB) |
+| POST | `/api/files/users/{userId}/banner?userType=PLAYER` | ✅ | Upload de banner (máx 10MB) |
+| POST | `/api/files/posts/{postId}/image` | ✅ | Upload de imagem de post (máx 10MB) |
+| POST | `/api/files/games/{gameId}/image` | ✅ | Upload de imagem de jogo (máx 10MB) |
+| POST | `/api/files/teams/{teamId}/logo` | ✅ | Upload de logo de time (máx 5MB) |
+| POST | `/api/files/documents?category={category}` | ✅ | Upload de documento (máx 50MB) |
+| POST | `/api/files/temp` | ✅ | Upload temporário (máx 20MB) |
+| GET | `/api/files/users/{userId}/avatars?userType=PLAYER` | ❌ | Listar avatares de usuário |
+| GET | `/api/files/users/{userId}/banners?userType=PLAYER` | ❌ | Listar banners de usuário |
+| GET | `/api/files/posts/{postId}/images` | ❌ | Listar imagens de post |
+| GET | `/api/files/games/{gameId}/images` | ❌ | Listar imagens de jogo |
+| GET | `/api/files/teams/{teamId}/logos` | ❌ | Listar logos de time |
+| DELETE | `/api/files/delete?url={fileUrl}` | ✅ | Deletar arquivo por URL |
+
+**Tipos de arquivo aceitos (imagens):** JPG, PNG, GIF, WebP  
+**Azure Blob Storage Containers:** avatars, imagens, documentos, temp
 
 ---
 
