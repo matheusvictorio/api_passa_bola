@@ -5,6 +5,8 @@ import com.fiap.projects.apipassabola.entity.UserType;
 import com.fiap.projects.apipassabola.service.NotificationService;
 import com.fiap.projects.apipassabola.service.UserContextService;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -26,6 +28,9 @@ import java.util.Map;
     allowCredentials = "true"
 )
 public class NotificationController {
+
+
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
     
     private final NotificationService notificationService;
     private final UserContextService userContextService;
@@ -114,22 +119,41 @@ public class NotificationController {
     @PatchMapping("/{id}/read")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, Object>> markAsRead(@PathVariable String id) {
-        Long notificationId = Long.parseLong(id);
-        UserContextService.UserIdAndType currentUser = userContextService.getCurrentGlobalUserIdAndType();
-        
-        boolean success = notificationService.markAsRead(notificationId, currentUser.getUserId(), currentUser.getUserType());
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", success);
-        
-        if (success) {
-            response.put("message", "Notificação marcada como lida");
-        } else {
-            response.put("message", "Notificação não encontrada ou já processada");
+        try {
+            Long notificationId = Long.parseLong(id);
+            UserContextService.UserIdAndType currentUser = userContextService.getCurrentGlobalUserIdAndType();
+            
+            log.info("Tentando marcar notificação {} como lida. UserId: {}, UserType: {}", 
+                    notificationId, currentUser.getUserId(), currentUser.getUserType());
+            
+            boolean success = notificationService.markAsRead(notificationId, currentUser.getUserId(), currentUser.getUserType());
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", success);
+            
+            if (success) {
+                response.put("message", "Notificação marcada como lida");
+            } else {
+                response.put("message", "Notificação não encontrada ou já processada");
+            }
+            
+            // Sempre retorna 200 OK para evitar erros no frontend
+            return ResponseEntity.ok(response);
+            
+        } catch (NumberFormatException e) {
+            log.error("ID de notificação inválido: {}", id, e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "ID de notificação inválido");
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            log.error("Erro ao marcar notificação {} como lida: {}", id, e.getMessage(), e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Erro ao processar requisição");
+            return ResponseEntity.ok(response);
         }
-        
-        // Sempre retorna 200 OK para evitar erros no frontend
-        return ResponseEntity.ok(response);
     }
     
     /**
