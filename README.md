@@ -1930,7 +1930,6 @@ Content-Type: application/json
 
 {
   "content": "Preparando para o próximo treino! 💪⚽",
-  "imageUrl": "https://example.com/treino.jpg",
   "type": "GENERAL"
 }
 ```
@@ -4124,7 +4123,6 @@ curl -X POST http://localhost:8080/api/posts \
   -H "Content-Type: application/json" \
   -d '{
     "content": "Preparando para o próximo treino! 💪⚽",
-    "imageUrl": "https://example.com/treino.jpg",
     "type": "TRAINING_UPDATE"
   }'
 
