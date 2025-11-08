@@ -324,18 +324,23 @@ public class FileUploadController {
         try {
             log.info("Listando imagens do post: {}", postId);
 
-            List<String> images = blobService.listFiles("imagens", "posts/" + postId);
+            String folder = "posts/" + postId;
+            log.info("Buscando na pasta: {}", folder);
+            
+            List<String> images = blobService.listFiles("imagens", folder);
+            log.info("Imagens encontradas: {}", images.size());
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("postId", postId);
+            response.put("folder", folder); // Para debug
             response.put("images", images);
             response.put("count", images.size());
 
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Erro ao listar imagens: {}", e.getMessage());
+            log.error("Erro ao listar imagens: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("Erro ao listar imagens: " + e.getMessage()));
         }
@@ -350,18 +355,23 @@ public class FileUploadController {
         try {
             log.info("Listando imagens do jogo: {}", gameId);
 
-            List<String> images = blobService.listFiles("imagens", "games/" + gameId);
+            String folder = "games/" + gameId;
+            log.info("Buscando na pasta: {}", folder);
+            
+            List<String> images = blobService.listFiles("imagens", folder);
+            log.info("Imagens encontradas: {}", images.size());
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("gameId", gameId);
+            response.put("folder", folder); // Para debug
             response.put("images", images);
             response.put("count", images.size());
 
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Erro ao listar imagens: {}", e.getMessage());
+            log.error("Erro ao listar imagens: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("Erro ao listar imagens: " + e.getMessage()));
         }
@@ -416,12 +426,16 @@ public class FileUploadController {
             log.info("Listando banners do usuário: {} tipo: {}", userId, userType);
 
             String folder = "banners/" + userType.toLowerCase() + "/" + userId;
+            log.info("Buscando na pasta: {}", folder);
+            
             List<String> banners = blobService.listFiles("avatars", folder);
+            log.info("Banners encontrados: {}", banners.size());
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("userId", userId);
             response.put("userType", userType);
+            response.put("folder", folder); // Para debug
             response.put("banners", banners);
             response.put("count", banners.size());
             response.put("currentBanner", banners.isEmpty() ? null : banners.get(banners.size() - 1)); // Último upload
@@ -429,7 +443,7 @@ public class FileUploadController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Erro ao listar banners: {}", e.getMessage());
+            log.error("Erro ao listar banners: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("Erro ao listar banners: " + e.getMessage()));
         }
@@ -444,11 +458,16 @@ public class FileUploadController {
         try {
             log.info("Listando logos do time: {}", teamId);
 
-            List<String> logos = blobService.listFiles("imagens", "teams/" + teamId);
+            String folder = "teams/" + teamId;
+            log.info("Buscando na pasta: {}", folder);
+            
+            List<String> logos = blobService.listFiles("imagens", folder);
+            log.info("Logos encontrados: {}", logos.size());
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("teamId", teamId);
+            response.put("folder", folder); // Para debug
             response.put("logos", logos);
             response.put("count", logos.size());
             response.put("currentLogo", logos.isEmpty() ? null : logos.get(logos.size() - 1)); // Último upload
@@ -456,7 +475,7 @@ public class FileUploadController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Erro ao listar logos: {}", e.getMessage());
+            log.error("Erro ao listar logos: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("Erro ao listar logos: " + e.getMessage()));
         }
